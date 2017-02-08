@@ -4,8 +4,14 @@ DocOnce format to other formats.  Some convenience functions used in
 translation modules (latex.py, html.py, etc.) are also included in
 here.
 """
-import re, sys, urllib, os
-from misc import option, _abort
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+import re, sys, urllib.request, urllib.parse, urllib.error, os, shutil, subprocess#, xml.etree.ElementTree
+from .misc import option, _abort
+from .doconce import errwarn, locale_dict
 
 format = None   # latex, pdflatex, html, plain, etc
 
@@ -51,15 +57,15 @@ _counter_for_html_movie_player = 0
 
 def internet_access(timeout=1):
     """Return True if internet is on, else False."""
-    import urllib2, socket
+    import urllib.request, urllib.error, urllib.parse, socket
     try:
         # Check google.com with numerical IP-address (which avoids
         # DNS loopup) and set timeout to 1 sec so this does not
         # take much time (google.com should respond quickly)
        #response = urllib2.urlopen('http://8.8.8.8', timeout=timeout)
-       response = urllib2.urlopen('http://vg.no', timeout=timeout)
+       response = urllib.request.urlopen('http://vg.no', timeout=timeout)
        return True
-    except (urllib2.URLError, socket.timeout) as err:
+    except (urllib.error.URLError, socket.timeout) as err:
         pass
     return False
 
@@ -67,12 +73,12 @@ def safe_join(lines, delimiter):
     try:
         filestr = delimiter.join(lines) + '\n' # will fail if ord(char) > 127
         return filestr
-    except UnicodeDecodeError, e:
+    except UnicodeDecodeError as e:
         if "'ascii' codec can't decode":
-            print '*** error: non-ascii character - rerun with --encoding=utf-8'
+            errwarn('*** error: non-ascii character - rerun with --encoding=utf-8')
             _abort()
         else:
-            print e
+            errwarn(e)
             _abort()
 
 def fix_backslashes(text):
@@ -123,21 +129,21 @@ def is_file_or_url(filename, msg='checking existence of', debug=True):
         try:
             # Print a message in case the program hangs a while here
             if msg is not None or debug:
-                print '...', msg, filename, '...'
-            import urllib2
-            f = urllib2.urlopen(filename, timeout=10)
+                errwarn('... ' +  msg + ' ' +  filename + ' ...')
+            import urllib.request, urllib.error, urllib.parse
+            f = urllib.request.urlopen(filename, timeout=10)
             text = f.read()
             f.close()
             ext = os.path.splitext(filename)[1]
             if ext in ('.html', 'htm'):
                 # Successful opening of an HTML file
                 if msg or debug:
-                    print '    found!'
+                    errwarn('    found!')
                 return 'url'
             elif ext == '':
                 # Successful opening of a directory (meaning index.html)
                 if msg or debug:
-                    print '    found!'
+                    errwarn('    found!')
                 return 'url'
             else:
                 # Seemingly successful opening of a file, but check if
@@ -153,17 +159,17 @@ def is_file_or_url(filename, msg='checking existence of', debug=True):
                     or 'Not Found' in text):
                     # HTML file with an error message: file not found
                     if msg or debug:
-                        print '    %s not found' % filename
+                        errwarn('    %s not found' % filename)
                         return None
                 else:
                     if msg or debug:
-                        print '    found!'
+                        errwarn('    found!')
                     return 'url'
-        except IOError, e:
+        except IOError as e:
             if msg or debug:
-                print '    NOT found!'
-            if debug:
-                print '    urllib.urlopen error:', e
+                errwarn('    not found!')
+            #if debug:  # not necessary
+            #    errwarn('    urllib.urlopen error:', e)
             return None
     else:
         return ('file' if os.path.isfile(filename) else None)
@@ -190,7 +196,7 @@ def get_copyfile_info(filestr=None, copyright_filename=None, format=None):
     # Copyright info
     cr_text = None
     if copyright_filename is None:
-        from doconce import dofile_basename
+        from .doconce import dofile_basename
         cr_filename = '.' + dofile_basename + '.copyright'
     else:
         cr_filename = copyright_filename
@@ -222,6 +228,50 @@ def get_copyfile_info(filestr=None, copyright_filename=None, format=None):
 
     return cr_text
 
+def fix_ref_section_chapter(filestr, format):
+    # .... see section ref{my:sec} is replaced by
+    # see the section "...section heading..."
+    pattern = r'[Ss]ection(s?)\s+ref\{'
+    replacement = r'the section\g<1> ref{'
+    filestr = re.sub(pattern, replacement, filestr)
+    pattern = r'[Cc]hapter(s?)\s+ref\{'
+    replacement = r'the chapter\g<1> ref{'
+    filestr = re.sub(pattern, replacement, filestr)
+    # Do not use "the appendix" since the headings in appendices
+    # have "Appendix: title"
+    pattern = r'[Aa]ppendix\s+ref\{'
+    #replacement = r'the appendix ref{'
+    replacement = r' ref{'
+    filestr = re.sub(pattern, replacement, filestr)
+    pattern = r'[Aa]ppendices\s+ref\{'
+    #replacement = r'the appendices ref{'
+    replacement = r' ref{'
+    filestr = re.sub(pattern, replacement, filestr)
+
+    # Need special adjustment to handle start of sentence (capital) or not.
+    if format == 'html':
+        # Might be just an inferior pattern from html.py or actually
+        # needed for HTML... more general pattern below
+        pattern = r'([.?!]\s+|\n\n)the (sections?|chapters?)\s+ref'
+    else:
+        pattern = r'([.?!]\s+|\n\n|[%=~-]\n+)the (sections?|chapters?)\s+ref'
+    replacement = r'\g<1>The \g<2> ref'
+    filestr = re.sub(pattern, replacement, filestr)
+    # Fix side effect: cf. The section ...
+    filestr = re.sub(r'cf\.\s+The', 'cf. the', filestr)
+
+    # Remove Exercise, Project, Problem in references since those words
+    # are used in the title of the section too
+    pattern = r'(the\s*)?([Ee]xercises?|[Pp]rojects?|[Pp]roblems?)\s+ref\{'
+    replacement = r'ref{'
+    filestr = re.sub(pattern, replacement, filestr)
+    # Fix side effect from the above that one gets constructions 'the The'
+    filestr = re.sub(r'the\s+The', 'the', filestr)
+
+    # Note that latex.py has its own quite different code since latex
+    # behaves differently and doconce syntax is close to latex writing
+    # when it comes to section/chapter references.
+    return filestr
 
 def indent_lines(text, format, indentation=' '*8, trailing_newline=True):
     """
@@ -290,14 +340,16 @@ def table_analysis(table):
     if table[0] != ['horizontal rule'] or \
        table[2] != ['horizontal rule'] or \
        table[-1] != ['horizontal rule']:
-        print '*** error: table lacks the right three horizontal rules'
+        errwarn('*** error: table lacks the right three horizontal rules')
     if len(table[1]) < max_num_columns:
-        print '*** warning: table headline with entries'
-        print '   ', '| ' + ' | '.join(table[1]) + ' |'
-        print '   has %d columns while further down there are %d columns' % \
-              (len(table[1]), max_num_columns)
-        print '   the list of columns in the headline reads'
-        print table[1]
+        errwarn('*** warning: table headline with entries')
+        errwarn('    ' + '| ' + ' | '.join(table[1]) + ' |')
+        errwarn('   has %d columns while further down there are %d columns' %
+                (len(table[1]), max_num_columns))
+        errwarn('   the list of columns in the headline reads')
+        errwarn(str(table[1]))
+        errwarn('   Here is the entire table:')
+        errwarn(str(table))
     # Find the width of the various columns
     column_width = [0]*max_num_columns
     for i, row in enumerate(table):
@@ -312,9 +364,9 @@ def online_python_tutor(code, return_tp='iframe'):
     (return_tp is 'iframe') for code embedded in
     on pythontutor.com.
     """
-    codestr = urllib.quote_plus(code.strip())
+    codestr = urllib.parse.quote_plus(code.strip())
     if return_tp == 'iframe':
-        urlprm = urllib.urlencode({'py': 2,
+        urlprm = urllib.parse.urlencode({'py': 2,
                                    'curInstr': 0,
                                    'cumulative': 'false'})
         iframe = """\
@@ -332,45 +384,63 @@ def online_python_tutor(code, return_tp='iframe'):
 
 def align2equations(filestr, format):
     """Turn align environments into separate equation environments."""
-    if not '{align}' in filestr:
+    if '{align' not in filestr:
         return filestr
 
-    # sphinx: just replace align, pandoc/ipynb: replace align and align*
-    # technique: add } if sphinx
-    postfixes = ['}'] if format == 'sphinx' else ['}', '*}']
+    # sphinx/ipynb: just replace align, alignat, not align* and alignat*
+    postfixes = ['}', 'at}'] if format in ('sphinx', 'ipynb') \
+                else ['}', '*}', 'at}', 'at*}']
+    # apply to "{align" + postfixes[i]
 
     lines = filestr.splitlines()
     inside_align = False
     inside_code = False
+    inside_math = False
+    inside_matrix = False
     for postfix in postfixes:
         for i in range(len(lines)):
             if lines[i].startswith('!bc'):
                 inside_code = True
             if lines[i].startswith('!ec'):
                 inside_code = False
-            if inside_code:
+            if lines[i].startswith('!bt'):
+                inside_math = True
+            if lines[i].startswith('!et'):
+                inside_math = False
+            if 'begin{pmatrix}' in lines[i] or 'begin{array}' in lines[i]:
+                inside_matrix = True
+            if 'end{pmatrix}' in lines[i] or 'end{array}' in lines[i]:
+                inside_matrix = False
+            if not inside_math:
+                # Rewrite only math inside !bt-!et
                 continue
 
             if r'\begin{align%s' % postfix in lines[i]:
                 inside_align = True
                 lines[i] = lines[i].replace(
                 r'\begin{align%s' % postfix, r'\begin{equation%s' % postfix)
-            if inside_align and '\\\\' in lines[i]:
+                # Wrong replacements a la begin{equationat*}{2} are fixed below
+            # Not a problem anymore:
+            #if inside_align and ('begin{array}' in lines[i] or
+            #                     'begin{pmatrix}' in lines[i]):
+            #    errwarn('*** error: with %s output, align environments' % format)
+            #    errwarn('    cannot have arrays/matrices with & and \\\\')
+            #    errwarn('    rewrite with single equations (not align)!')
+            #    errwarn('\n'.join(lines[i-4:i+5]).replace('{equation', '{align'))
+            #    _abort()
+            if inside_align and (not inside_matrix) and '\\\\' in lines[i]:
                 lines[i] = lines[i].replace(
                 '\\\\', '\n' + r'\end{equation%s' % postfix + '\n!et\n\n!bt\n' + r'\begin{equation%s ' % postfix)
-            if inside_align and ('begin{array}' in lines[i] or
-                                 'begin{bmatrix}' in lines[i]):
-                print '*** error: with %s output, align environments' % format
-                print '    cannot have arrays/matrices with & and \\\\'
-                print '    rewrite with single equations!'
-                print '\n'.join(lines[i-4:i+5]).replace('{equation', '{align')
-                _abort()
-            if inside_align and '&' in lines[i]:
+            if inside_align and (not inside_matrix) and '&' in lines[i]:
                 lines[i] = lines[i].replace('&', '')
             if r'\end{align%s' % postfix in lines[i]:
                 inside_align = False
                 lines[i] = lines[i].replace(
                 r'\end{align%s' % postfix, r'\end{equation%s' % postfix)
+            # Fixes from too simple replacements:
+            lines[i] = lines[i].replace('{equationat}', '{equation}')
+            lines[i] = lines[i].replace('{equationat*}', '{equation*}')
+            lines[i] = re.sub(r'\{equation\}\{\d+\}', '{equation}', lines[i])
     filestr = '\n'.join(lines)
     return filestr
 
@@ -414,7 +484,7 @@ def default_movie(m):
     global _counter_for_html_movie_player
     filename = m.group('filename')
     caption = m.group('caption').strip()
-    from html import html_movie
+    from .html import html_movie
     text = html_movie(m)
 
     # Make an HTML file where the movie file can be played
@@ -433,7 +503,7 @@ def default_movie(m):
 </body>
 </html>
 """ % text)
-    print '*** made link to new HTML file %s\n    with code to display the movie \n    %s' % (moviehtml, filename)
+    errwarn('*** made link to new HTML file %s\n    with code to display the movie \n    %s' % (moviehtml, filename))
     text = '%s `%s`: load "`%s`": "%s" into a browser' % \
        (caption, filename, moviehtml, moviehtml)
     return text
@@ -449,8 +519,8 @@ def begin_end_consistency_checks(filestr, envirs):
 
         lines = []
         if nb != ne:
-            print 'ERROR: %d %s do not match %d %s directives' % \
-                  (nb, begin, ne, end)
+            errwarn('ERROR: %d %s do not match %d %s directives' %
+                    (nb, begin, ne, end))
             if not lines:
                 lines = filestr.splitlines()
             begin_ends = []
@@ -462,14 +532,14 @@ def begin_end_consistency_checks(filestr, envirs):
             for k in range(1, len(begin_ends)):
                 pattern, i = begin_ends[k]
                 if pattern == begin_ends[k-1][0]:
-                    print '\n\nTwo', pattern, 'after each other!\n'
+                    errwarn('\n\nTwo ' + pattern + ' after each other!\n')
                     for j in range(begin_ends[k-1][1], begin_ends[k][1]+1):
-                        print lines[j]
+                        errwarn(lines[j])
                     _abort()
             if begin_ends[-1][0].startswith('!b'):
-                print 'Missing %s after final %s' % \
-                      (begin_ends[-1][0].replace('!b', '!e'),
-                       begin_ends[-1][0])
+                errwarn('Missing %s after final %s' %
+                        (begin_ends[-1][0].replace('!b', '!e'),
+                         begin_ends[-1][0]))
                 _abort()
 
 
@@ -491,6 +561,10 @@ def remove_code_and_tex(filestr, format):
     # !bc *cod-t and !bc *pro-t is used to indicate pure text.
     if format not in ('ipynb', 'matlabnb'):
         filestr = re.sub(r'^!bc +([a-z0-9]+)-t', r'!bc \g<1>',
+                         filestr, flags=re.MULTILINE)
+    # !bc pypro-h for show/hide button
+    if format not in ('html', 'sphinx'):
+        filestr = re.sub(r'^!bc +([a-z0-9]+)-h', r'!bc \g<1>',
                          filestr, flags=re.MULTILINE)
 
     # (recall that !bc can be followed by extra information that we must keep:)
@@ -561,10 +635,10 @@ def remove_code_and_tex(filestr, format):
             if ref in removed_labels:
                 problematic_refs.append(ref)
         if problematic_refs:
-            print '*** error: removed all equation labels from the DocOnce source,'
-            print '    but there are still references (ref{...}) to equation labels:'
-            print '\n   ', ', '.join(problematic_refs)
-            print '\n    remove all these references!'
+            errwarn('*** error: removed all equation labels from the DocOnce source,')
+            errwarn('    but there are still references (ref{...}) to equation labels:')
+            errwarn('\n   ' + ', '.join(problematic_refs))
+            errwarn('\n    remove all these references!')
             _abort()
 
     # Remove blank lines in tex blocks
@@ -579,27 +653,27 @@ def remove_code_and_tex(filestr, format):
     # Give error if blocks contain !bt
     for i in range(len(tex_blocks)):
         if '!bt' in tex_blocks[i] or '!et' in tex_blocks[i]:
-            print '*** error: double !bt or !et in latex block:'
-            print tex_blocks[i]
+            errwarn('*** error: double !bt or !et in latex block:')
+            errwarn(tex_blocks[i])
             _abort()
 
     # Check that math blocks do not contain edit markup or comments
     for block in tex_blocks:
         m = re.search(INLINE_TAGS['inlinecomment'], block, flags=re.DOTALL)
         if m:
-            print '*** error: tex block with mathematics cannot contain'
-            print '    inline comment or edit markup!'
+            errwarn('*** error: tex block with mathematics cannot contain')
+            errwarn('    inline comment or edit markup!')
             if m.group('name') in ('del', 'add') or '->' in m.group('comment'):
                 # edit markup
-                print '    Place info about editing after the block.'
-            print block
+                errwarn('    Place info about editing after the block.')
+            errwarn(block)
             _abort()
 
-    # Remove |\pause| in code blocks if not latex
+    # Remove (*@pause@*) in code blocks if not latex
     if format not in ('latex', 'pdflatex'):
         for i in range(len(code_blocks)):
-            if r'|\pause|' in code_blocks[i]:
-                code_blocks[i] = re.sub(r'^\|\\pause\|\n', '', code_blocks[i], flags=re.MULTILINE)
+            if r'(*@\pause@*)' in code_blocks[i]:
+                code_blocks[i] = re.sub(r'^\(\*\@\\pause\@\*\)\n', '', code_blocks[i], flags=re.MULTILINE)
 
     return filestr, code_blocks, code_block_types, tex_blocks
 
@@ -627,23 +701,57 @@ def add_labels_to_all_numbered_equations(tex_blocks):
                     'end{equation}', 'end{equation*}')
 
         if 'begin{align}' in tex_blocks[i]:
-            # Assume that \\ is only appearing as delimiter between
-            # equations (i.e., no \begin{array} environment with \\
-            # between matrix rows...).
-            eqs = tex_blocks[i].split(r'\\')
-            for j in range(len(eqs)):
-                if not 'label{' in eqs[j] and not r'\nonumber' in eqs[j]:
-                    n += 1
-                    if 'end{align}' in eqs[j]:
-                        eqs[j] = eqs[j].replace(
-                            r'\end{align}', ' label{_auto%d}\n' % n + r'\end{align}')
-                    else:
-                        if eqs[j][-1] != '\n':
-                            eqs[j] += '\n'
+            if '{array}' not in tex_blocks[i] and \
+               '{pmatrix}' not in tex_blocks[i]:
+                # Assume that \\ is only appearing as delimiter between
+                # equations (i.e., no \begin{array} environment with \\
+                # between matrix rows...).
+                eqs = tex_blocks[i].split(r'\\')
+                for j in range(len(eqs)):
+                    if not 'label{' in eqs[j] and not r'\nonumber' in eqs[j]:
+                        n += 1
+                        if 'end{align}' in eqs[j]:
+                            eqs[j] = eqs[j].replace(
+                                r'\end{align}', ' label{_auto%d}\n' % n + r'\end{align}')
                         else:
-                            eqs[j] += ' '
-                        eqs[j] += 'label{_auto%d}' % n
-            tex_blocks[i] = r'\\'.join(eqs)
+                            if eqs[j][-1] != '\n':
+                                eqs[j] += '\n'
+                            else:
+                                eqs[j] += ' '
+                            eqs[j] += 'label{_auto%d}' % n
+                tex_blocks[i] = r'\\'.join(eqs)
+            else:
+                # parse //
+                lines = tex_blocks[i].splitlines()
+                inside_array = False
+                has_label = False
+                for j in range(len(lines)):
+                    if lines[j].count('\\\\') > 1:
+                        errwarn('*** error: two \\\\ on the same line in an equation is considered syntax error:\n    %s\n    -> rewrite using more lines!' % lines[j])
+                        _abort()
+                    if '\\\\' in lines[j] and ('{array}' in lines[j] or \
+                                               '{pmatrix}' in lines[j]):
+                        errwarn('*** error: \\\\ and array/matrix declaration on the same line:\n    %s\n    -> split into multiple lines!' % lines[j])
+                        _abort()
+                    if 'begin{array}' in lines[j] or \
+                       'begin{pmatrix}' in lines[j]:
+                        inside_array = True
+                    if 'end{array}' in lines[j] or \
+                       'end{pmatrix}' in lines[j]:
+                        inside_array = False
+                    if 'label{' in lines[j]:
+                        has_label = True
+                    #print 'XXX', inside_array, lines[j]
+                    if not inside_array and '\\\\' in lines[j]:
+                        if not r'\nonumber' in lines[j] and not has_label:
+                            n += 1
+                            lines[j] = lines[j].replace('\\\\', ' label{_auto%d}\n\\\\' % n)
+                            has_label = False
+                    if 'end{align}' in lines[j] and not has_label:
+                        n += 1
+                        lines[j] = lines[j].replace('\\end{align}', ' label{_auto%d}\n\\end{align}' % n)
+
+                tex_blocks[i] = '\n'.join(lines)
         tex_blocks[i] = re.sub(r'^ +label{', 'label{', tex_blocks[i],
                                flags=re.MULTILINE)
     return tex_blocks
@@ -658,40 +766,40 @@ def insert_code_and_tex(filestr, code_blocks, tex_blocks, format,
     code_lines = re.findall(pattern, filestr, flags=re.MULTILINE)
     n = len(set(code_lines))
     if complete_doc and len(code_blocks) != n:
-        print '*** error: found %d code block markers for %d initial code blocks' % (n, len(code_blocks))
-        print """    Possible causes:
+        errwarn('*** error: found %d code block markers for %d initial code blocks' % (n, len(code_blocks)))
+        errwarn("""    Possible causes:
            - mismatch of !bt and !et within one file, such that a !bt
              swallows code
            - mismatch of !bt and !et across files in multi-file documents
            - !bc and !ec inside code blocks - replace by |bc and |ec
     (run doconce on each individual file to locate the problem, then on
-     smaller and smaller parts of each file)"""
-        numbers = range(len(code_blocks))  # expected numbers in code blocks
+     smaller and smaller parts of each file)""")
+        numbers = list(range(len(code_blocks)))  # expected numbers in code blocks
         for e in code_lines:
             # remove number
             number = int(e.split()[0])
             if number not in numbers:
-                print '   Problem: found %s, but the number %d was unexpected' % (e, number)
+                errwarn('   Problem: found %s, but the number %d was unexpected' % (e, number))
             else:
                 numbers.remove(number)
         if numbers:
-            print '    Problem: did not find XX <<<!!CODE_BLOCK for XX in', numbers
+            errwarn('    Problem: did not find XX <<<!!CODE_BLOCK for XX in %s' % numbers)
 
         _abort()
     pattern = r'^\d+ ' + _MATH_BLOCK
     n = len(set(re.findall(pattern, filestr, flags=re.MULTILINE)))
     if complete_doc and len(tex_blocks) != n:
-        print '*** error: found %d tex block markers for %d initial tex blocks\nAbort!' % (n, len(tex_blocks))
-        print """    Possible causes:
+        errwarn('*** error: found %d tex block markers for %d initial tex blocks\nAbort!' % (n, len(tex_blocks)))
+        errwarn("""    Possible causes:
            - mismatch of !bc and !ec within one file, such that a !bc
              swallows tex blocks
            - mismatch of !bc and !ec across files in multi-file documents
            - !bt and !et inside code blocks - replace by |bt and |et
     (run doconce on each file to locate the problem, then on
-     smaller and smaller parts of each file)"""
+     smaller and smaller parts of each file)""")
         _abort()
 
-    from misc import option
+    from .misc import option
     max_linelength = option('max_bc_linelength=', None)
     if max_linelength is not None:
         max_linelength = int(max_linelength)
@@ -763,6 +871,16 @@ def doconce_exercise_output(
     # at the beginning of the translation process.
 
     latex_style = option('latex_style=', 'std')
+    solution_style = option('exercise_solution=', 'paragraph') # admon, quote
+
+    language = locale_dict['language']
+    Solution = locale_dict[language]['Solution']
+    if solution_header == '__Solution.__':
+        solution_header = locale_dict[language]['__Solution.__']
+    if answer_header == '__Answer.__':
+        answer_header = locale_dict[language]['__Answer.__']
+    if hint_header == '__Hint.__':
+        hint_header = locale_dict[language]['__Hint.__']
 
     # Store solutions in a separate string
     has_solutions = False
@@ -802,14 +920,18 @@ def doconce_exercise_output(
         if sol:
             sol += ' Solution to ' + exer['type']
         if include_numbering:
-            exer_numbering = option('exercise_numbering=', 'absolute')
-            if exer_numbering == 'chapter' and exer['chapter_type'] is not None:
-                s += ' %s.%s' % (exer['chapter_no'], exer['chapter_exercise'])
+            if 'inherited_no' in exer:
+                exer_no = str(exer['inherited_no'])
             else:
-                s += ' ' + str(exer['no'])
+                exer_numbering = option('exercise_numbering=', 'absolute')
+                if exer_numbering == 'chapter' and exer['chapter_type'] is not None:
+                    exer_no = '%s.%s' % (exer['chapter_no'], exer['chapter_exercise'])
+                else:
+                    exer_no = str(exer['no'])
 
+            s += ' ' + exer_no
             if sol:
-                sol += ' ' + str(exer['no'])
+                sol += ' ' + exer_no
         s += ':'
         if sol:
             sol += ':'
@@ -891,10 +1013,12 @@ def doconce_exercise_output(
 
                 if subex['file']:
                     if len(subex['file']) == 1:
-                        s += 'Filename: `%s`' % subex['file'][0] + '.\n'
+                        Filename = locale_dict[language]['Filename']
+                        s += '%s: `%s`' % (Filename, subex['file'][0]) + '.\n'
                     else:
-                        s += 'Filenames: %s' % \
-                             ', '.join(['`%s`' % f for f in subex['file']]) + '.\n'
+                        Filenames = locale_dict[language]['Filenames']
+                        s += '%s: %s' % (Filenames, ', '.join(
+                            ['`%s`' % f for f in subex['file']]) + '.\n')
 
                 if subex['answer']:
                     s += '\n'
@@ -911,16 +1035,29 @@ def doconce_exercise_output(
                     s += '\n'
                     if exer['type'] != 'Example':
                         s += '\n# ' + envir_delimiter_lines['sol'][0] + '\n'
-                    s += solution_header + '\n'
+                    if solution_style == 'paragraph':
+                        s += solution_header + '\n'
+                    elif solution_style == 'admon':
+                        s   += '\n!bnotice %s.\n\n' % Solution
+                        sol += '\n!bnotice %s.\n\n' % Solution
+                    elif solution_style == 'quote':
+                        s   += '\n!bquote\n' + solution_header + '\n'
+                        sol += '\n!bquote\n' + solution_header + '\n'
                     # Make sure we have a sentence after the heading
                     if solution_header.endswith('===') and \
-                       re.search(r'^\d+ %s' % _CODE_BLOCK,
-                                 subex['solution'].lstrip()):
-                        print '\nwarning: open the solution in exercise "%s" with a line of\ntext before the code! (Now "Code:" is inserted)' % exer['title'] + '\n'
-                        s += 'Code:\n'
+                        re.search(r'^\d+ %s' % _CODE_BLOCK,
+                                  subex['solution'].lstrip()):
+                        errwarn('\nwarning: open the solution in exercise "%s" with a line of\ntext before the code! (Now "Code:" is inserted)' % exer['title'] + '\n')
+                        s   += 'Code:\n'
                         sol += '\nCode:\n'
-                    s += subex['solution'] + '\n'
+                    s   +=        subex['solution'] + '\n'
                     sol += '\n' + subex['solution'] + '\n'
+                    if solution_style == 'admon':
+                        s   += '!enotice\n\n'
+                        sol += '!enotice\n\n'
+                    elif solution_style == 'quote':
+                        s   += '!equote\n\n'
+                        sol += '!equote\n\n'
                     if exer['type'] != 'Example':
                         s += '\n# ' + envir_delimiter_lines['sol'][1] + '\n'
 
@@ -947,15 +1084,28 @@ def doconce_exercise_output(
         # avoid marking such sections for deletion (--without_solutions)
         if exer['type'] != 'Example':
             s += '\n# ' + envir_delimiter_lines['sol'][0] + '\n'
-        s += solution_header + '\n'
+        if solution_style == 'paragraph':
+            s += solution_header + '\n'
+        elif solution_style == 'admon':
+            s   += '\n!bnotice %s.\n\n' % Solution
+            sol += '\n!bnotice %s.\n\n' % Solution
+        elif solution_style == 'quote':
+            s   += '\n!bquote\n' + solution_header + '\n'
+            sol += '\n!bquote\n' + solution_header + '\n'
         # Make sure we have a sentence after the heading if real heading
         if solution_header.endswith('===') and \
-           re.search(r'^\d+ %s' % _CODE_BLOCK, exer['solution'].lstrip()):
-            print '\nwarning: open the solution in exercise "%s" with a line of\ntext before the code! (Now "Code:" is inserted)' % exer['title'] + '\n'
-            s += 'Code:\n'
+            re.search(r'^\d+ %s' % _CODE_BLOCK, exer['solution'].lstrip()):
+            errwarn('\nwarning: open the solution in exercise "%s" with a line of\ntext before the code! (Now "Code:" is inserted)' % exer['title'] + '\n')
+            s   += 'Code:\n'
             sol += '\nCode:\n'
-        s += exer['solution'] + '\n'
+        s   +=       exer['solution'] + '\n'
         sol += '\n'+ exer['solution'] + '\n'
+        if solution_style == 'admon':
+            s   += '!enotice\n\n'
+            sol += '!enotice\n\n'
+        elif solution_style == 'quote':
+            s   += '!equote\n\n'
+            sol += '!equote\n\n'
         if exer['type'] != 'Example':
             s += '\n# ' + envir_delimiter_lines['sol'][1] + '\n'
 
@@ -965,16 +1115,16 @@ def doconce_exercise_output(
             # otherwise let it proceed at the end of the exercise text.
             s += '\n'
         if len(exer['file']) == 1:
-            s += 'Filename: `%s`' % exer['file'][0] + '.\n'
+            Filename = locale_dict[language]['Filename']
+            s += '%s: `%s`' % (Filename, exer['file'][0]) + '.\n'
         else:
-            s += 'Filenames: %s' % \
-                 ', '.join(['`%s`' % f for f in exer['file']]) + '.\n'
-        #s += '*Filename*: `%s`' % exer['file'] + '.\n'
-        #s += '\n' + '*Filename*: `%s`' % exer['file'] + '.\n'
-
+            Filenames = locale_dict[language]['Filenames']
+            s += '%s: %s' % (Filenames,
+                             ', '.join(['`%s`' %
+                                        f for f in exer['file']]) + '.\n')
     if exer['closing_remarks']:
-        s += '\n# Closing remarks for this %s\n\n=== Remarks ===\n\n' % \
-             exer['type'] + exer['closing_remarks'] + '\n\n'
+        s += '\n# Closing remarks for this %s\n\n=== %s ===\n\n' % \
+             (exer['type'], locale_dict[locale_dict['language']]['remarks'].capitalize()) + exer['closing_remarks'] + '\n\n'
 
     if exer['solution_file']:
         if len(exer['solution_file']) == 1:
@@ -1004,7 +1154,7 @@ def bibliography(pubdata, citations, format='doconce'):
     in the ordered dictionary ``citations`` (``pubdata`` is a list
     of dicts loaded from a Publish database file).
     """
-    import publish_doconce
+    from . import publish_doconce
     if format == 'doconce':
         formatter = publish_doconce.doconce_format
     elif format in ('rst', 'sphinx'):
@@ -1015,13 +1165,14 @@ def bibliography(pubdata, citations, format='doconce'):
     citation_keys = list(citations.keys())
     # Reduce the database to the minimum
     pubdata = [pub for pub in pubdata if pub['key'] in citation_keys]
-    # Sort publications in the order of citations
+    # Sort publications in the order of my citations
     pubs = []
     for key in citations:
         for pub in pubdata:
             if pub['key'] == key:
                 pubs.append(pub)
                 break
+    # Format the output
     #text = '\n======= Bibliography =======\n\n' # the user writes the heading
     text = ''
     for pub in pubs:
@@ -1043,25 +1194,149 @@ def has_custom_pygments_lexer(name):
         try:
             get_lexer_by_name('ipy')
         except Exception as e:
-            print '*** warning: !bc ipy used for IPython sessions, but'
-            print '    ipython is not supported for syntax highlighting!'
-            print '    install:'
-            print '    git clone https://hplbit@bitbucket.org/hplbit/pygments-ipython-console.git; cd pygments-ipython-console; sudo python setup.py install'
-            print e
+            errwarn('*** warning: !bc ipy used for IPython sessions, but')
+            errwarn('    ipython is not supported for syntax highlighting!')
+            errwarn('    install:')
+            errwarn('    git clone https://hplbit@bitbucket.org/hplbit/pygments-ipython-console.git; cd pygments-ipython-console; sudo python setup.py install')
+            errwarn(str(e))
             return False
     if name == 'doconce':
         try:
             get_lexer_by_name(name)
         except Exception as e:
-            print '*** warning: !bc do used for DocOnce code, but'
-            print '    not supported for syntax highlighting!'
-            print '    install:'
-            print '    sudo pip install -e git+https://github.com/hplgit/pygments-doconce#egg=pygments-doconce'
-            print '\n    or manually:'
-            print '    git clone https://github.com/hplgit/pygments-doconce.git; cd pygments-doconce; sudo python setup.py install'
-            print e
+            errwarn('*** warning: !bc do used for DocOnce code, but')
+            errwarn('    not supported for syntax highlighting!')
+            errwarn('    install:')
+            errwarn('    sudo pip install -e git+https://github.com/hplgit/pygments-doconce#egg=pygments-doconce')
+            errwarn('\n    or manually:')
+            errwarn('    git clone https://github.com/hplgit/pygments-doconce.git; cd pygments-doconce; sudo python setup.py install')
+            errwarn(str(e))
             return False
     return True
+
+
+def tikz2img(tikz_file, encoding='utf8', tikz_libs=None):
+    dvisvgm_template = r"""
+\documentclass[dvisvgm]{minimal}
+
+\usepackage[%s]{inputenc}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+
+%% TikZ libraries
+%s
+
+\begin{document}
+\noindent
+\input{%s}
+\end{document}
+"""
+
+    # handle tikz libraries
+    if tikz_libs is None:
+        tikz_libs = ""
+    elif isinstance(tikz_libs, list):
+        #tikz_libs = '\n'.join([r"\usetikzlibrary{%s}" % s for s in tikz_libs])
+        tikz_libs = r"\usetikzlibrary{%s}" % (', '.join(tikz_libs))
+    else:
+        # Error
+        raise Exception("TikZ libraries is not a list!")
+
+    # create temporary directory
+    fig_dir = os.path.dirname(tikz_file)
+    tmp_dir = os.path.join(fig_dir, 'tmp_tikz_rendering')
+    if not os.path.isdir(tmp_dir):
+        os.mkdir(tmp_dir)
+
+    # filenames
+    tikz_basefile = os.path.basename(tikz_file)
+    tikz_basefile_wo_ext = os.path.splitext(tikz_basefile)[0]
+    render_suffix = "_tikzrender"
+    tex_file = os.path.join(tmp_dir, tikz_basefile_wo_ext + ".tex")
+    dvi_file = os.path.join(tmp_dir, tikz_basefile_wo_ext + ".dvi")
+    svg_file = os.path.join(fig_dir, tikz_basefile_wo_ext + render_suffix + ".svg")
+    png_file = os.path.join(fig_dir, tikz_basefile_wo_ext + render_suffix + ".png")
+
+
+    # wrap tikz in TeX file
+    tex_content = dvisvgm_template % (encoding, tikz_libs, tikz_file)
+    #print tex_content
+
+    with open(tex_file, 'w') as f:
+        f.write(tex_content)
+
+
+
+    # TeX --> DVI
+    #print "TeX --> DVI"
+    p = subprocess.Popen(['latex', '-output-directory='+tmp_dir,
+                        '-interaction=nonstopmode',
+                        tex_file],
+              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.poll() != 0:
+        errwarn("Failed to compile LaTeX document with TikZ file!")
+        errwarn('STDOUT:\n'+out)
+        errwarn('STDERR:\n'+err)
+        errwarn('*** error: failed to compile LaTeX document with TikZ file\n'
+              + '    (this likely means that the tikz figure is invalid)\n'
+              + '    see the output from latex above')
+        return True
+
+    # DVI --> SVG
+    #print "DVI --> SVG"
+    p = subprocess.Popen(['dvisvgm', '--bbox=min',
+                          '-o', svg_file,
+                          '--no-fonts',
+                          #'-R', #not compatible with older versions of dvisvgm
+                          dvi_file],
+              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.poll() != 0:
+        errwarn('*** error: failed to convert TikZ figure from DVI to SVG')
+        errwarn('STDOUT:\n'+out)
+        errwarn('STDERR:\n'+err)
+        return True
+
+
+    # minor fixes to SVG file
+    # should remove viewBox, height and width to improve browser compatibility
+    """
+    tree = xml.etree.ElementTree.parse(svg_file)
+    root = tree.getroot()
+    updated_svg = False
+    for attribute in ['viewBox', 'height', 'width']:
+        if attribute in root.attrib:
+            del root.attrib[attribute]
+            updated_svg = True
+    if updated_svg: # no need to write the same file back
+        tree.write(svg_file)
+    """
+    # SVG --> PNG
+    #print "SVG --> PNG"
+    try:
+        p = subprocess.Popen(['inkscape', '--without-gui',
+                               '--export-area-drawing', # cropping
+                               '--export-dpi=600',
+                               '--export-background=#ffffff', # white background
+                               '--export-background-opacity=1.0',
+                               '--export-png='+png_file,
+                               svg_file],
+                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        if p.poll() != 0:
+            errwarn('*** error: failed to convert TikZ figure from SVG to PNG')
+            return True
+    except OSError as e:
+        errwarn('*** error: failed to convert TikZ figure from SVG to PNG')
+        errwarn('\n    reason: inkscape is not installed')
+
+    # clean up files
+    shutil.rmtree(tmp_dir)
+
+    return False    # not a failure
+
 
 BLANKLINE = {}
 FILENAME_EXTENSION = {}
@@ -1092,9 +1367,9 @@ QUIZ = {}
 # regular expressions for inline tags:
 #inline_tag_begin = r"""(?P<begin>(^|[(\s~>]|^__))"""
 # Need {} and ! in begin/end because of idx{...!_bold face_ ...}
-inline_tag_begin = r"""(?P<begin>(^|[(\s~>{!-]|^__))"""
+inline_tag_begin = r"""(?P<begin>(^|[(\s~>{!-]|^__|&[mn]dash;))"""
 # ' is included as apostrophe in end tag
-inline_tag_end = r"""(?P<end>($|[.,?!;:)<}!'\s~\[<-]))"""
+inline_tag_end = r"""(?P<end>($|[.,?!;:)<}!'\s~\[<&;-]))"""
 # alternatives using positive lookbehind and lookahead (not tested!):
 inline_tag_before = r"""(?<=(^|[(\s]))"""
 inline_tag_after = r"""(?=$|[.,?!;:)\s])"""
@@ -1102,6 +1377,9 @@ inline_tag_after = r"""(?=$|[.,?!;:)\s])"""
 
 _linked_files = '''\s*"(?P<url>([^"]+?\.html?|[^"]+?\.html?\#[^"]+?|[^"]+?\.txt|[^"]+?\.tex|[^"]+?\.pdf|[^"]+?\.f|[^"]+?\.c|[^"]+?\.cpp|[^"]+?\.cxx|[^"]+?\.py|[^"]+?\.ipynb|[^"]+?\.java|[^"]+?\.pl|[^"]+?\.sh|[^"]+?\.csh|[^"]+?\.zsh|[^"]+?\.ksh|[^"]+?\.tar\.gz|[^"]+?\.tar|[^"]+?\.zip|[^"]+?\.f77|[^"]+?\.f90|[^"]+?\.f95|[^"]+?\.png|[^"]+?\.jpe?g|[^"]+?\.gif|[^"]+?\.pdf|[^"]+?\.flv|[^"]+?\.webm|[^"]+?\.ogg|[^"]+?\.mp4|[^"]+?\.mpe?g|[^"]+?\.e?ps|_static-?[^/]*/[^"]+?))"'''
 #_linked_files = '''\s*"(?P<url>([^"]+?))"'''  # any file is accepted
+
+abstract_names = '|'.join([locale_dict[locale_dict['language']][p]
+                           for p in ['Abstract', 'Summary', 'Preface']])
 
 INLINE_TAGS = {
     # math: text inside $ signs, as in $a = b$, with space before the
@@ -1175,7 +1453,7 @@ INLINE_TAGS = {
     # it before DATE (not recommended for papers)
     # 'abstract' is in doconce.py processed before chapter, section, etc
     'abstract':  # needs re.DOTALL | re.MULTILINE
-    r"""^\s*__(?P<type>Abstract|Summary|Preface).__\s*(?P<text>.+?)(?P<rest>TOC:|\\tableofcontents|Table of [Cc]ontents|DATE:|% --- begin date|\\date\{|<!-- date|__[A-Z].+[.?:]__|^={3,9})""",
+    r"""^\s*__(?P<type>%s).__\s*(?P<text>.+?)(?P<rest>TOC:|\\tableofcontents|Table of [Cc]ontents|DATE:|%% --- begin date|\\date\{|<!-- date|__[A-Z].+[.?:]__|^={3,9})""" % abstract_names,  # Abstract|Summary|Preface
 
     'keywords':
     r'^__Keywords.__\s+(?P<subst>.+)\s*$',

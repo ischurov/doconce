@@ -21,6 +21,22 @@ Automatically generated HTML file from DocOnce source
 code { color: inherit; background-color: transparent; }
 /* Let pre tags for code blocks have the same color as the surroundings */
 pre { color: inherit; background-color: transparent; }
+
+/* Add scrollbar to dropdown menus in bootstrap navigation bar */
+.dropdown-menu {
+   height: auto;
+   max-height: 400px;
+   overflow-x: hidden;
+}
+
+/* Adds an invisible element before each target to offset for the navigation
+   bar */
+.anchor::before {
+  content:"";
+  display:block;
+  height:45px; /* fixed header height*/
+  margin:-50px 0 0; /* negative fixed header height */
+}
 </style>
 
 
@@ -28,20 +44,20 @@ pre { color: inherit; background-color: transparent; }
 
 <!-- tocinfo
 {'highest level': 0,
- 'sections': [(' More details on writing DocOnce documents with Bootstrap layout ',
+ 'sections': [('More details on writing DocOnce documents with Bootstrap layout',
                0,
                None,
                '___sec0'),
-              (' Navigation ', 1, None, '___sec1'),
-              (' Themes ', 1, None, '___sec2'),
-              (' Demonstrations of admons ', 1, None, '___sec3'),
-              (' Horizontal alignment of document elements ',
+              ('Navigation', 1, None, '___sec1'),
+              ('Themes', 1, None, '___sec2'),
+              ('Demonstrations of admons', 1, None, '___sec3'),
+              ('Horizontal alignment of document elements',
                1,
                'sec:examples',
                'sec:examples'),
-              (' Principles of grid structures ', 2, None, '___sec5'),
-              (' Example on a 1x3 grid structure ', 2, None, '___sec6'),
-              (' Variation of the previous grid structure using admons ',
+              ('Principles of grid structures', 2, None, '___sec5'),
+              ('Example on a 1x3 grid structure', 2, None, '___sec6'),
+              ('Variation of the previous grid structure using admons',
                2,
                None,
                '___sec7')]}
@@ -76,6 +92,7 @@ MathJax.Hub.Config({
     </button>
     <a class="navbar-brand" href="cerulean_v1.html">Demo of the Bootstrap style</a>
   </div>
+
   <div class="navbar-collapse collapse navbar-responsive-collapse">
     <ul class="nav navbar-nav navbar-right">
       <li class="dropdown">
@@ -110,26 +127,28 @@ MathJax.Hub.Config({
 
 <p>
 DocOnce supports a variety of Bootstrap styles for HTML
-documents. To get the <code>journal</code> Bootswatch style, run
+documents. To get the <code>journal</code> Bootswatch style, for instance, run
 
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">Terminal&gt; doconce format html mydoc --html_style=bootswatch_journal
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Terminal&gt; doconce format html mydoc --html_style=bootswatch_journal
 </pre></div>
 <p>
 The title, optionally with authors, date, table of contents, abstract
 and/or a short introduction is typeset using the Jumbotron environment
-from Bootstrap, resulting in large fonts on gray background.  If a
-<code>!split</code> command is used before the first section heading or <code>TOC: on</code>
-instruction, a button with <code>Read...</code> and a link to the next page is
-inserted if the document is split using <code>doconce split_html</code>.  This
-construction results in a short Bootstrap main page that has become
-very popular on web the last couple of years.  The
-<code>--html_bootstrap_jumbotron=value</code> option can be used to adjust the
-jumbotron: <code>value</code> can be <code>on</code> (default), <code>off</code> (to turn the gray
-background and large fonts off), or <code>h2</code> (to replace the large font in
-the document title by a smaller font).
+from Bootstrap, resulting in large fonts on a gray background.
+
+<p>
+If a <code>!split</code> command is used before the first section heading or
+<code>TOC: on</code> instruction, a button with <code>Read...</code> and a link to the next
+page is inserted if the document is split using <code>doconce split_html</code>.
+This construction results in a short Bootstrap main page that has
+become very popular on web.  The <code>--html_bootstrap_jumbotron=value</code>
+option can be used to adjust the jumbotron: <code>value</code> can be <code>on</code>
+(default), <code>off</code> (to turn the gray background and large fonts off), or
+<code>h2</code> (to replace the large font in the document title by a smaller
+font).
 
 <p>
 <!-- A split before the first section will enable a button in the jumbotron -->
@@ -141,9 +160,9 @@ the document title by a smaller font).
 
 <!-- !split -->
 
-<h1 class="page-header" id="___sec0">More details on writing DocOnce documents with Bootstrap layout <a name="___sec0"></a></h1>
+<center><h1 id="___sec0" class="anchor">More details on writing DocOnce documents with Bootstrap layout </h1></center> <!-- chapter heading -->
 
-<h1 id="___sec1">Navigation <a name="___sec1"></a></h1>
+<h1 id="___sec1" class="anchor">Navigation </h1>
 
 <p>
 A multiple-page document is as usual created by inserting <code>!split</code> at
@@ -157,7 +176,7 @@ page number is seen.
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">Terminal&gt; doconce format html mydoc --html_style=bootstrap_bluegray
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Terminal&gt; doconce format html mydoc --html_style=bootstrap_bluegray
 Terminal&gt; doconce split_html mydoc --pagination
 </pre></div>
 <p>
@@ -169,7 +188,7 @@ to make the pull down menu shorter than the page height. The
 navigation bar on top can be turned off by the option
 <code>--html_bootstrap_navbar=off</code> to the <code>doconce format</code> command.
 
-<h1 id="___sec2">Themes <a name="___sec2"></a></h1>
+<h1 id="___sec2" class="anchor">Themes </h1>
 
 <p>
 DocOnce supports the following themes from the Bootstrap family:
@@ -214,13 +233,13 @@ DocOnce supports the following themes from the Bootstrap family:
 <ul>
    <li> <code>FlatUI</code> for the <a href="http://designmodo.github.io/Flat-UI/" target="_self">Flat UI</a> theme</li>
    <li> <code>bootflat</code> for the <a href="http://bootflat.github.io/" target="_self">Bootflat</a> theme</li>
-   <li> <code>blue</code>, <code>red</code>, <code>brown</code>, <code>bluegray</code>, and <code>bloodish</code> color variations
-     of the original Bootstrap theme</li>
+   <li> <code>blue</code>, <code>red</code>, <code>brown</code>, <code>bluegray</code>, <code>bloodish</code>, <code>cbc</code>, and <code>simula</code>
+     color variations of the original Bootstrap theme</li>
 </ul>
 
 </ul>
 
-You write Boostrap HTML files as normal DocOnce documents, but there
+You write Bootstrap HTML files as normal DocOnce documents, but there
 are some additional features:
 
 <ul>
@@ -229,10 +248,10 @@ are some additional features:
    next page.</li>
  <li> Possibility to define a local grid of elements in the document to
    align admons, figures, code, or other elements horisontally.</li>
- <li> Other layouts of admons <button type="button" class="btn btn-primary btn-xs" rel="tooltip" data-placement="top" title="&quot;Admon&quot; is a short form for admonition: a box that highlights some text, e.g., as extra material or as particularly important material. DocOnce supports different types of admonitions: notice, question, summary, and warning. These can have an optional title, and some admonition styles will also include an icon image. In addition, there is a block admonition without any icon, but with an optional title."><a name="link_footnote_1"><a><a href="#def_footnote_1" style="color: white">1</a></button>.</li>
+ <li> Other layouts of admons <button type="button" class="btn btn-primary btn-xs" rel="tooltip" data-placement="top" title="&quot;Admon&quot; is a short form for admonition: a box that highlights some text, e.g., as extra material or as particularly important material. DocOnce supports different types of admonitions: notice, question, summary, and warning. These can have an optional title, and some admonition styles will also include an icon image. In addition, there is a block admonition without any icon, but with an optional title."><a href="#def_footnote_1" id="link_footnote_1" style="color: white">1</a></button>.</li>
  <li> Footnotes feature a tooltip functionality such that hovering the mouse
    over the footnote brings up a little window with the footnote
-   (try it on the footnote after <em>admon</em> right above!).</li>
+   (try it on the footnote after <em>admons</em> right above!).</li>
 </ul>
 
 <div class="alert alert-block alert-success alert-text-normal"><b>Quick generation of websites.</b>
@@ -248,15 +267,15 @@ pages for different things, just
 </div>
 
 
-<p><a name="def_footnote_1"></a><a href="#link_footnote_1"><b>1:</b></a> &quot;Admon&quot; is a short form for admonition: a
+<p id="def_footnote_1"><a href="#link_footnote_1"><b>1:</b></a> &quot;Admon&quot; is a short form for admonition: a
 box that highlights some text, e.g., as extra material or as
 particularly important material. DocOnce supports different types
 of admonitions: notice, question, summary, and warning. These
 can have an optional title, and some admonition styles will also
 include an icon image. In addition, there is a block admonition
-without any icon, but with an optional title.
+without any icon, but with an optional title.</p>
 
-<h1 id="___sec3">Demonstrations of admons <a name="___sec3"></a></h1>
+<h1 id="___sec3" class="anchor">Demonstrations of admons </h1>
 
 <p>
 The Bootstrap/Bootswatch styles support two kinds of admons:
@@ -266,15 +285,15 @@ The Bootstrap/Bootswatch styles support two kinds of admons:
  <li> panel admon (<code>bootstrap_panel</code>) where only the title has colored background</li>
 </ul>
 
-Typical commands for producing Boostrap or Bootswatch layouts are
+Typical commands for producing Bootstrap or Bootswatch layouts are
 
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">Terminal&gt; doconce format html mydoc --html_style=boostrap
-Terminal&gt; doconce format html mydoc --html_style=booswatch
-Terminal&gt; doconce format html mydoc --html_style=boostrap --admon_style=bootstrap_panel
-Terminal&gt; doconce format html mydoc --html_style=booswatch_superhero --admon_style=bootstrap_panel
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Terminal&gt; doconce format html mydoc --html_style=bootstrap
+Terminal&gt; doconce format html mydoc --html_style=bootswatch
+Terminal&gt; doconce format html mydoc --html_style=bootstrap --admon_style=bootstrap_panel
+Terminal&gt; doconce format html mydoc --html_style=bootswatch_superhero --admon_style=bootstrap_panel
 </pre></div>
 <p>
 Below are some examples on admons.
@@ -285,7 +304,7 @@ Below are some examples on admons.
 <p>
 
 <!-- code=ipy (!bc ipy) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000080; font-weight: bold">In [1]: </span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">numpy</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">np</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000080; font-weight: bold">In [1]: </span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">numpy</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">np</span>
 
 <span style="color: #000080; font-weight: bold">In [2]: </span>x <span style="color: #666666">=</span> np<span style="color: #666666">.</span>linspace(<span style="color: #666666">0</span>, <span style="color: #666666">4*</span>np<span style="color: #666666">.</span>pi, <span style="color: #666666">11</span>)
 
@@ -313,7 +332,7 @@ This is the admon for warnings or paying attention.
 
 <p>
 <div class="alert alert-block alert-info alert-text-normal"><b>Question.</b>
-How many admon styles are supported by the DocOnce Boostrap and Bootswatch
+How many admon styles are supported by the DocOnce Bootstrap and Bootswatch
 styles?
 </div>
 
@@ -353,14 +372,14 @@ Tables often get a fancy typesetting:
 <tr><td align="left">   6          </td> <td align="right">   71,000       </td> <td align="right">   214               </td> <td align="right">   <code>NaN</code>    </td> </tr>
 </tbody>
     </table>
-  </div>
-</div> <!-- col-xs-5 -->
+  </div> <!-- col-xs-5 -->
+</div> <!-- cell row -->
 <p>
 <!-- !split -->
 
-<h1 id="sec:examples">Horizontal alignment of document elements<a name="sec:examples"></a></h1>
+<h1 id="sec:examples" class="anchor">Horizontal alignment of document elements</h1>
 
-<h2 id="___sec5">Principles of grid structures <a name="___sec5"></a></h2>
+<h2 id="___sec5" class="anchor">Principles of grid structures </h2>
 
 <p>
 The HTML page can feature a grid structure of cells, defined by
@@ -369,7 +388,7 @@ the following syntax in case of a 1x3 grid:
 <p>
 
 <!-- code=text typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"># begin-grid-area
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span># begin-grid-area
 
 !bslidecell 00
 ...
@@ -404,7 +423,7 @@ be lost because it appears outside the slidecell environments:
 <p>
 
 <!-- code=text typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"># begin-grid-area
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span># begin-grid-area
 
 !bslidecell 00
 ...
@@ -439,11 +458,13 @@ of this grid, we simply change <code>00</code> by <code>02</code> and <code>02</
 </div>
 
 
-<h2 id="___sec6">Example on a 1x3 grid structure <a name="___sec6"></a></h2>
+<h2 id="___sec6" class="anchor">Example on a 1x3 grid structure </h2>
 
 <p>
 <div class="row"> <!-- begin cell row -->
   <div class="col-sm-4">
+
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 <b>Mathematics.</b>
 Given a function
 
@@ -453,13 +474,15 @@ Write a program for evaluating \( f(x) \), and test the program
 for the value of \( f(0) \).
   </div> <!-- column col-sm-4 -->
   <div class="col-sm-4">
+
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 <b>Implementation.</b>
 The Python implementation reads
 
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">math</span> <span style="color: #008000; font-weight: bold">import</span> exp, sin
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">math</span> <span style="color: #008000; font-weight: bold">import</span> exp, sin
 
 <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">f</span>(x):
     <span style="color: #008000; font-weight: bold">return</span> exp(<span style="color: #666666">-</span>a<span style="color: #666666">*</span>x)<span style="color: #666666">*</span>sin(w<span style="color: #666666">*</span>x)
@@ -470,6 +493,8 @@ main program.
   </div> <!-- column col-sm-4 -->
   <div class="col-sm-4">
 
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
+
 <p>
 <b>Computational experiment.</b>
 With a main program
@@ -477,7 +502,7 @@ With a main program
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">a <span style="color: #666666">=</span> <span style="color: #666666">1</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>a <span style="color: #666666">=</span> <span style="color: #666666">1</span>
 <span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">math</span> <span style="color: #008000; font-weight: bold">import</span> pi
 w <span style="color: #666666">=</span> pi
 <span style="color: #008000; font-weight: bold">print</span> f(<span style="color: #666666">0</span>)
@@ -488,14 +513,14 @@ we can run the program:
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">Terminal&gt; python prog.py
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Terminal&gt; python prog.py
 0
 </pre></div>
 <p>
-  </div> <!-- column col-sm-4 -->
+</div> <!-- column col-sm-4 -->
 </div> <!-- end cell row -->
 
-<h2 id="___sec7">Variation of the previous grid structure using admons <a name="___sec7"></a></h2>
+<h2 id="___sec7" class="anchor">Variation of the previous grid structure using admons </h2>
 
 <p>
 <!-- Note: panels are realized as admons, using --admon_style=bootstrap_panel -->
@@ -503,6 +528,8 @@ we can run the program:
 <p>
 <div class="row"> <!-- begin cell row -->
   <div class="col-sm-4">
+
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 <div class="alert alert-block alert-success alert-text-normal"><b>Mathematics.</b>
 Given a function
 
@@ -514,13 +541,15 @@ for the value of \( f(0) \).
 
   </div> <!-- column col-sm-4 -->
   <div class="col-sm-4">
+
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 <div class="alert alert-block alert-success alert-text-normal"><b>Implementation.</b>
 The Python implementation reads
 
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">math</span> <span style="color: #008000; font-weight: bold">import</span> exp, sin
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">math</span> <span style="color: #008000; font-weight: bold">import</span> exp, sin
 
 <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">f</span>(x):
     <span style="color: #008000; font-weight: bold">return</span> exp(<span style="color: #666666">-</span>a<span style="color: #666666">*</span>x)<span style="color: #666666">*</span>sin(w<span style="color: #666666">*</span>x)
@@ -532,13 +561,15 @@ main program.
 
   </div> <!-- column col-sm-4 -->
   <div class="col-sm-4">
+
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 <div class="alert alert-block alert-success alert-text-normal"><b>Computational experiment.</b>
 With a main program
 
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">a <span style="color: #666666">=</span> <span style="color: #666666">1</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>a <span style="color: #666666">=</span> <span style="color: #666666">1</span>
 <span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">math</span> <span style="color: #008000; font-weight: bold">import</span> pi
 w <span style="color: #666666">=</span> pi
 <span style="color: #008000; font-weight: bold">print</span> f(<span style="color: #666666">0</span>)
@@ -549,7 +580,7 @@ we can run the program:
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Terminal&gt; python prog.py
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>Terminal&gt; python prog.py
 0
 </pre></div>
 <p>

@@ -16,25 +16,44 @@ Automatically generated HTML file from DocOnce source
 <link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
 -->
 
+<style type="text/css">
+
+/* Add scrollbar to dropdown menus in bootstrap navigation bar */
+.dropdown-menu {
+   height: auto;
+   max-height: 400px;
+   overflow-x: hidden;
+}
+
+/* Adds an invisible element before each target to offset for the navigation
+   bar */
+.anchor::before {
+  content:"";
+  display:block;
+  height:50px; /* fixed header height*/
+  margin:-50px 0 0; /* negative fixed header height */
+}
+</style>
+
 
 </head>
 
 <!-- tocinfo
 {'highest level': 0,
- 'sections': [(' More details on writing DocOnce documents with Bootstrap layout ',
+ 'sections': [('More details on writing DocOnce documents with Bootstrap layout',
                0,
                None,
                '___sec0'),
-              (' Navigation ', 1, None, '___sec1'),
-              (' Themes ', 1, None, '___sec2'),
-              (' Demonstrations of admons ', 1, None, '___sec3'),
-              (' Horizontal alignment of document elements ',
+              ('Navigation', 1, None, '___sec1'),
+              ('Themes', 1, None, '___sec2'),
+              ('Demonstrations of admons', 1, None, '___sec3'),
+              ('Horizontal alignment of document elements',
                1,
                'sec:examples',
                'sec:examples'),
-              (' Principles of grid structures ', 2, None, '___sec5'),
-              (' Example on a 1x3 grid structure ', 2, None, '___sec6'),
-              (' Variation of the previous grid structure using admons ',
+              ('Principles of grid structures', 2, None, '___sec5'),
+              ('Example on a 1x3 grid structure', 2, None, '___sec6'),
+              ('Variation of the previous grid structure using admons',
                2,
                None,
                '___sec7')]}
@@ -69,6 +88,7 @@ MathJax.Hub.Config({
     </button>
     <a class="navbar-brand" href="bootstrap_plain.html">Demo of the Bootstrap style</a>
   </div>
+
   <div class="navbar-collapse collapse navbar-responsive-collapse">
     <ul class="nav navbar-nav navbar-right">
       <li class="dropdown">
@@ -104,26 +124,28 @@ MathJax.Hub.Config({
 
 <p>
 DocOnce supports a variety of Bootstrap styles for HTML
-documents. To get the <code>journal</code> Bootswatch style, run
+documents. To get the <code>journal</code> Bootswatch style, for instance, run
 
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">Terminal&gt; doconce format html mydoc --html_style=bootswatch_journal
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Terminal&gt; doconce format html mydoc --html_style=bootswatch_journal
 </pre></div>
 <p>
 The title, optionally with authors, date, table of contents, abstract
 and/or a short introduction is typeset using the Jumbotron environment
-from Bootstrap, resulting in large fonts on gray background.  If a
-<code>!split</code> command is used before the first section heading or <code>TOC: on</code>
-instruction, a button with <code>Read...</code> and a link to the next page is
-inserted if the document is split using <code>doconce split_html</code>.  This
-construction results in a short Bootstrap main page that has become
-very popular on web the last couple of years.  The
-<code>--html_bootstrap_jumbotron=value</code> option can be used to adjust the
-jumbotron: <code>value</code> can be <code>on</code> (default), <code>off</code> (to turn the gray
-background and large fonts off), or <code>h2</code> (to replace the large font in
-the document title by a smaller font).
+from Bootstrap, resulting in large fonts on a gray background.
+
+<p>
+If a <code>!split</code> command is used before the first section heading or
+<code>TOC: on</code> instruction, a button with <code>Read...</code> and a link to the next
+page is inserted if the document is split using <code>doconce split_html</code>.
+This construction results in a short Bootstrap main page that has
+become very popular on web.  The <code>--html_bootstrap_jumbotron=value</code>
+option can be used to adjust the jumbotron: <code>value</code> can be <code>on</code>
+(default), <code>off</code> (to turn the gray background and large fonts off), or
+<code>h2</code> (to replace the large font in the document title by a smaller
+font).
 
 <p>
 <!-- A split before the first section will enable a button in the jumbotron -->

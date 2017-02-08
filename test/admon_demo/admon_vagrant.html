@@ -138,11 +138,11 @@ MathJax.Hub.Config({
 
 <!-- !split -->
 
-<h1 id="___sec0">Introduction </h1>
+<h1 id="___sec0" class="anchor">Introduction </h1>
 First some ordinary text to compare font sizes in admonitions
 and the surrounding text.
 
-<h2 id="___sec1">Code </h2>
+<h2 id="___sec1" class="anchor">Code </h2>
 
 <p>
 Need some code outside admons for color and font comparisons:
@@ -150,7 +150,7 @@ Need some code outside admons for color and font comparisons:
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">some_code</span>(x):
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">some_code</span>(x):
     <span style="color: #008000; font-weight: bold">return</span> sin(x)<span style="color: #666666">*</span>exp(<span style="color: #666666">1-</span>x)
 </pre></div>
 <p>
@@ -159,11 +159,11 @@ And some plain text verbatim:
 <p>
 
 <!-- code=text typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">x=1.0 y=0.9 z=0.4
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>x=1.0 y=0.9 z=0.4
 x=1.1 y=0.3 z=0.1
 </pre></div>
 
-<h2 id="___sec2">Quotes and boxes </h2>
+<h2 id="___sec2" class="anchor">Quotes and boxes </h2>
 
 <p>
 Here is a plain quote environment.
@@ -226,6 +226,13 @@ $$
 
 
 <p>
+<b>Hint.</b>
+
+Newton's method requires a good start vector to converge fast.
+
+
+
+<p>
 Let's begin a new paragraph and show a box with code only:
 
 <p>
@@ -235,7 +242,7 @@ Let's begin a new paragraph and show a box with code only:
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">some_code</span>(x):
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">some_code</span>(x):
     <span style="color: #008000; font-weight: bold">return</span> sin(x)<span style="color: #666666">*</span>exp(<span style="color: #666666">1-</span>x)
 </pre></div>
 <p>
@@ -243,7 +250,7 @@ Let's begin a new paragraph and show a box with code only:
 <!-- end box -->
 
 
-<h2 id="___sec3">Admonitions </h2>
+<h2 id="___sec3" class="anchor">Admonitions </h2>
 
 <p>
 Let us start with a plain warning environment.
@@ -282,7 +289,7 @@ Also some code:
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">f</span>(x):
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">f</span>(x):
     <span style="color: #008000; font-weight: bold">return</span> x
 </pre></div>
 <p>
@@ -291,7 +298,7 @@ And a complete program
 <p>
 
 <!-- code=python (!bc pypro) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">print</span> <span style="color: #BA2121">&quot;Hello, World!&quot;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">print</span> <span style="color: #BA2121">&quot;Hello, World!&quot;</span>
 </pre></div>
 <p>
 </div>
@@ -384,7 +391,7 @@ Because here the thing is to do
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">urllib</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">urllib</span>
 
 <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">grab</span>(url, filename):
     urllib<span style="color: #666666">.</span>urlretrieve(url, filename<span style="color: #666666">=</span>filename)
@@ -402,7 +409,7 @@ And here comes some text with bad news.
 </div>
 
 
-<h2 id="___sec4">Going deeper environments </h2>
+<h2 id="___sec4" class="anchor">Going deeper environments </h2>
 
 <p>
 Here is a long notice environment with a custom title and much
@@ -435,7 +442,7 @@ code is task that this "Going deeper" environment targets.
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">Dudt</span>(u):
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">Dudt</span>(u):
     r <span style="color: #666666">=</span> diff(u, t) <span style="color: #666666">+</span> u<span style="color: #666666">*</span>grad(u)
     <span style="color: #008000; font-weight: bold">return</span> r
 
@@ -449,7 +456,7 @@ Longer computer code requires vertical space:
 <p>
 
 <!-- code=python (!bc pycod) typeset with pygments style "default" -->
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #008000; font-weight: bold">class</span> <span style="color: #0000FF; font-weight: bold">Diff</span>:
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">class</span> <span style="color: #0000FF; font-weight: bold">Diff</span>:
     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">__init__</span>(<span style="color: #008000">self</span>, f, h<span style="color: #666666">=1E-5</span>):
         <span style="color: #008000">self</span><span style="color: #666666">.</span>f <span style="color: #666666">=</span> f
         <span style="color: #008000">self</span><span style="color: #666666">.</span>h <span style="color: #666666">=</span> <span style="color: #008000">float</span>(h)
@@ -492,11 +499,11 @@ Longer computer code requires vertical space:
 And then we add a figure too.
 
 <p>
-<center><p><img src="../../doc/src/manual/fig/wave1D.png" align="bottom" width=400></p></center>
+<br /><br /><center><p><img src="../../doc/src/manual/fig/wave1D.png" align="bottom" width=400></p></center><br /><br />
 </div>
 
 
-<h2 id="___sec5">The end </h2>
+<h2 id="___sec5" class="anchor">The end </h2>
 
 <p>
 A bit of text before the summary, which we now call "Concluding remarks,

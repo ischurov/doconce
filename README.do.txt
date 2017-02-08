@@ -12,8 +12,35 @@ DocOnce is a modestly tagged (Markdown-like) markup language targeting scientifi
 
 ===== News =====
 
-Here are some of the most recent features in DocOnce:
+Here are some of the most recent features and enhancements in DocOnce:
 
+ * Kristian Gregorius Hustad has now made support for TikZ figures
+   in DocOnce. This means that you can use TikZ (popular among LaTeX writers)
+   to make a figure. The TikZ code will be used directly in `latex` or
+   `pdflatex` output, while an SVG version is made for HTML and a PNG is made
+   for all other formats. (This feature is still being developed. Please create
+   an issue if your TikZ figure isn't displayed properly.)
+ * Thanks to support from Mirco Meiners and Kristian Gregorius Hustad,
+   DocOnce now supports documents in foreign languages, at the moment
+   Norwegian and German. (Expect the code to still be a bit unstable as
+   these features are being tested and used.)
+ * It is easy to overlook the many warnings and non-fatal errors from
+   DocOnce when compiling a document. Now all comments from DocOnce for
+   a document `mydoc.do.txt` are collected in `mydoc.dlog` for
+   careful inspection.
+ * Lots of automatic adjustments of the Bootstrap styles: if it looks good
+   in one style, just switch to any other Bootstrap style and
+   it will look good there
+   as well (the generated code tweaks parameters in the various styles).
+ * The `doconce format` command may issue a lot of warnings and concerns,
+   which are usually lost in the very long output from translating
+   DocOnce to some output format. Now all the warnings, errors, and comments
+   are available in `mydoc.dolog` (if the main file is named `mydoc.do.txt`).
+   It is recommended to examine this `.dolog` file.
+ * Now you can copy code from files and left-adjust the code `X`
+   spaces by the syntax `@@@CODE-X filename`. This is particularly useful
+   when copying code snippets from function bodies and get
+   the snippets to start in column 1.
  * DocOnce supports various types of copyright statements for
    commercial and academic settings (thanks to Louis Criscuolo's
    many suggestions to implement this important feature). See
@@ -49,6 +76,10 @@ Here are some of the most recent features in DocOnce:
    "Kahoot online games": "https://getkahoot.com".
  * "Admonitions": "http://hplgit.github.io/doconce/doc/pub/manual/html/manual.html#admonitions", i.e., boxes for notifications, tips, warnings, etc., with
    great "flexibility in the typesetting": "http://hplgit.github.io/doconce/doc/pub/admon/index.html" (at least in HTML and LaTeX).
+
+Here are some recent books written in DocOnce:
+
+FIGURE: [doc/src/manual/fig/doconce_books, width=600 frac=0.8]
 
 ===== Installation =====
 
@@ -147,10 +178,10 @@ translation).
 
 ##"http://www.springer.com/mathematics/computational+science+%26+engineering/book/978-3-642-54958-8"
 
-A "complete book": "http://www.amazon.com/Scientific-Programming-Computational-Science-Engineering/dp/3642549586/ref=sr_1_1?s=books&ie=UTF8&qid=1419162166&sr=1-1&keywords=langtangen"
-(900 pages) has been written entirely in DocOnce. The primary format
-is a publisher-specific LaTeX style, but HTML or Sphinx formats can
-easily be generated, such as "this chapter in Bootstrap style":
+Several books (up to over 1000 pages) have been written entirely in
+DocOnce. The primary format is a publisher-specific LaTeX style, but
+HTML or Sphinx formats can easily be generated, such as "this chapter
+in Bootstrap style":
 "http://hplgit.github.io/primer.html/doc/pub/looplist/looplist-bootstrap.html",
 or the "solarized color style":
 "http://hplgit.github.io/primer.html/doc/pub/looplist/looplist-solarized.html"
@@ -202,7 +233,7 @@ DocOnce is licensed under the BSD license, see the included `LICENSE` file.
 
 ===== Author =====
 
-DocOnce is written by Hans Petter Langtangen ("hpl@simula.no": "mailto:hpl@simula.no") 2006-2015. A lot of people have contributed to testing the software and suggesting improvements.
+DocOnce is written by Hans Petter Langtangen ("hpl@simula.no": "mailto:hpl@simula.no") 2006-2016. A lot of people have contributed to testing the software and suggesting improvements.
 
 ===== How to cite =====
 

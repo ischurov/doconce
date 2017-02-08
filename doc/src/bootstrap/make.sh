@@ -1,3 +1,4 @@
+#!/bin/bash
 dir=tmp
 rm -rf $dir
 mkdir $dir
@@ -8,10 +9,10 @@ darkpygm='monokai'
 #darkpygm='native'  # not good
 
 # Plain bootstrap
-doconce format html bootstrap_demo --html_style=bootstrap --pygments_html_style=default --html_admon=bootstrap_panel --html_output=bootstrap_plain
+doconce format html bootstrap_demo --html_style=bootstrap --pygments_html_style=default --html_admon=bootstrap_panel --html_output=bootstrap_plain --debug
 doconce split_html bootstrap_plain --pagination
 
-styles="bloodish blue bluegray brown red FlatUI bootflat"
+styles="bloodish blue bluegray brown red FlatUI bootflat simula"
 for style in $styles; do
 doconce format html bootstrap_demo --html_style=bootstrap_$style --pygments_html_style=default --html_admon=bootstrap_panel --html_output=bootstrap_$style --html_code_style=inherit
 done
@@ -22,6 +23,9 @@ doconce format html bootstrap_demo --html_style=bootswatch_$style --pygments_htm
 
 doconce format html bootstrap_demo --html_style=bootswatch_$style --pygments_html_style=default --html_admon=bootstrap_panel --html_code_style=inherit --html_pre_style=inherit --html_output=$style
 done
+
+style=journal
+doconce format html bootstrap_demo --html_style=bootswatch_$style --pygments_html_style=default --html_admon=bootstrap_panel --html_code_style=inherit --html_pre_style=inherit --html_output=${style}_big "--html_body_style=font-size:20px;line-height:1.5"
 
 style=vagrant
 doconce format html bootstrap_demo --html_style=bootstrap --html_template=template_$style.html --pygments_html_style=default --html_admon=bootstrap_panel --html_output=$style --html_code_style=inherit --html_toc_indent=0

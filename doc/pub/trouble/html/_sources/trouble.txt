@@ -10,7 +10,7 @@ DocOnce Troubleshooting and FAQ
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 :Authors: Hans Petter Langtangen
-:Date: Jan 9, 2016
+:Date: Jun 22, 2016
 
 
 .. admonition:: Disclaimer
@@ -33,6 +33,19 @@ DocOnce Troubleshooting and FAQ
 General topics
 ==============
 
+.. _sec:warnings:
+
+How can I study error messages and warnings from DocOnce?
+---------------------------------------------------------
+
+The output from DocOnce and later compilation by various tools can be
+overwhelming in the terminal window. Fortunately, DocOnce also writes
+its warnings and error message to ``mydoc.dlog`` if ``mydoc.do.txt`` is the
+name of the DocOnce root file. It is recommended to study ``mydoc.dlog``
+and correct anything that leads to warnings or errors without abortion.
+
+.. _sec:debug:
+
 How do I debug a DocOnce file that results in a strange error message?
 ----------------------------------------------------------------------
 
@@ -40,11 +53,54 @@ How do I debug a DocOnce file that results in a strange error message?
 
 .. index:: debugging DocOnce
 
-Isolate the problem by a "bisection" method: split the file in two, compile
+First, do ``doconce clean`` to clean up all old files and recompile.
+Run ``pdflatex`` or ``latex`` since that checks for errors in your math
+formulas and is stricter on syntax than many other output formats like
+``html`` and ``sphinx``. Fortunately, DocOnce performs syntax checking on
+many constuctions that just lead to plain errors in LaTeX.
+
+If you have a document consisting of a file or two, you can isolate
+the problem by a "bisection" method: split the file in two, compile
 both parts, continue with the part that gave the problem, and repeat
-the process. This will quickly narrow down the text so you ultimately understand
-the problem. If you do not understand why the identified piece of text
-gives an error message, try to rewrite.
+the process. This will quickly narrow down the text so you ultimately
+understand the problem.
+
+If you have a big book, it can be difficult to track down *where* the
+error is.  If the error comes from LaTeX compilation, go to the main
+file's ``.tex`` file.  Say the main document is ``mydoc.do.txt``. Then
+find the line with the reported error message in ``mydoc.tex``, find the
+cause of the error, *and correct the error in the corresponding
+DocOnce source file*.  To find this file, try to recognize in
+``mydoc.tex`` where in the document you are. Find some phrase that ``X``
+potentially can be unique and to a Unix ``find`` command on ``X``:
+
+.. code-block:: text
+
+    Terminal> find ../chapters -name '*.do.txt' -exec grep X {} \; -print
+
+Hopefully, the output indentifies the right DocOnce source file.
+
+If the error is a Mako error, you have to search in the
+``tmp_mako__mydoc.do.txt`` file: this is the file resulting from the
+running the Preprocess and Mako programs, and the file is therefore
+the actual text that DocOnce translates.
+
+In a big project, thre is usually some main file with a lot of
+``#include`` statements. Go to this file, ``mydoc.do.txt``, and "remove"
+the include statements by just removing the final ``e`` in include:
+``#includ``.  Now can you can easily compile the subdocuments one by
+one. Start with one document file and bring in new files for inclusion
+until the problem appears for the first time. Then you have isolated
+the problematic file.  It might be necessary to compile only this
+file. To this end, it might be necessary to insert Mako code in the
+beginning of the file, and specify certain command-line arguments,
+especially ``--allow_refs_to_external_docs`` so you do not get errors
+from missing labels that are defined elsewhere in the original big
+document.
+
+Eventually, you have tracked down the erroneous piece of text, but perhaps
+you do not understand *why*. Then you just have to rewrite the text to
+something that compiles.
 
 .. _sec:cite:
 
@@ -57,6 +113,43 @@ How do I cite and link to DocOnce?
 
 See the "How to cite" section
 on the `project page <https://github.com/hplgit/doconce>`__.
+
+Translation aborts when labels are not defined
+----------------------------------------------
+
+By default, the DocOnce translation aborts when references
+are found to lables not defined in the document (i.e., labels in other
+documents). This abortion can be annoying, and although it can be
+nullified by ``--no_abort``, that option also ignores other error messages.
+Instead, use ``--allow_refs_to_external_docs`` to allow references to labels
+in other documents (these references will of course not work).
+
+References to labels in other documents should anyway appear inside
+*generalized references*, see the `Generalied Cross-Referencing <http://hplgit.github.io/doconce/doc/pub/manual/html/manual.html#generalized-xross-referencing>`__
+section in the manual.
+
+.. _sec:toc_depth:
+
+How to I control the table of contents?
+---------------------------------------
+
+To include a table of contents in the document, insert the line
+
+.. code-block:: doconce
+
+    TOC: on
+
+in the DocOnce source at the place where you want the table of contents
+to be inserted. Often you want to do a pagebreak before the table of
+contents, and in that case, insert ``!split`` on the line before.
+
+To control the number of section levels in the table of contents
+(chapters, sections,
+subsections), use the ``--toc_depth=X`` command-line option, where ``X`` reflects
+the maximum level. Level 0 correspond to chapter. The defaul value of
+``X``, 2, thus means including chapters, sections, and subsections.
+For Sphinx output, one must use the command-line option ``toc_depth=X``
+as part of the command ``doconce sphinx_dir``.
 
 .. _sec:custom:navlinks:
 
@@ -76,11 +169,11 @@ Here is an example where we insert two links:
 
 .. code-block:: text
 
-        Terminal> doconce format html tmp1 --html_style=bootstrap \
-                  "--html_bootstrap_navbar_links=\
-                  Google|http://google.com;\
-                  DocOnce formats|\
-                  http://hplgit.github.io/teamods/writing_reports/index.html"
+    Terminal> doconce format html tmp1 --html_style=bootstrap \
+              "--html_bootstrap_navbar_links=\
+              Google|http://google.com;\
+              DocOnce formats|\
+              http://hplgit.github.io/teamods/writing_reports/index.html"
 
 This command is broken over several lines but should be written on one
 line. The syntax for custom links is ``link|url;link|url;link|url``.
@@ -102,7 +195,7 @@ for ``GO TO 1`` and ``GO TO 2``. Compile the document with
 
 .. code-block:: text
 
-        Terminal> doconce format html mydoc --html_template=template_vagrant.html
+    Terminal> doconce format html mydoc --html_template=template_vagrant.html
 
 Sphinx bootstrap theme
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -115,46 +208,46 @@ edit the ``navbar_links`` item. Here is an example:
 
 .. code-block:: python
 
-        elif html_theme == 'bootstrap':
+    elif html_theme == 'bootstrap':
+        ...
+        html_theme_options = {
+            'navbar_title': short_title,
+            # Global TOC depth for "site" navbar tab. (Default: 1)
+            # Switching to -1 shows all levels.
+            'globaltoc_depth': -1,
             ...
-            html_theme_options = {
-                'navbar_title': short_title,
-                # Global TOC depth for "site" navbar tab. (Default: 1)
-                # Switching to -1 shows all levels.
-                'globaltoc_depth': -1,
-                ...
-                # A list of tuples containing pages or urls to link to.
-        	...
-                'navbar_links': [
-        	   ('Google', 'http://google.com', True),
-                   ('DocOnce formats',
-                    'http://hplgit.github.io/teamods/writing_reports/index.html',
-        	    True),
-        	   ],
+            # A list of tuples containing pages or urls to link to.
+    	...
+            'navbar_links': [
+    	   ('Google', 'http://google.com', True),
+               ('DocOnce formats',
+                'http://hplgit.github.io/teamods/writing_reports/index.html',
+    	    True),
+    	   ],
 
 One may hand-edit the ``conf.py`` file and provide a custom version
 in the ``doconce sphinx_dir`` command:
 
 .. code-block:: text
 
-        Terminal> doconce sphinx_dir conf.py=../customfiles/conf.py \
-                  theme=alabaster toc_depth=2 mydoc
+    Terminal> doconce sphinx_dir conf.py=../customfiles/conf.py \
+              theme=alabaster toc_depth=2 mydoc
 
 Alternatively, one may auto edit the generated ``conf.py`` file in
 a script:
 
 .. code-block:: bash
 
-        doconce format sphinx mydoc
-        doconce sphinx_dir theme=alabaster toc_depth=2 mydoc
-        # Auto edit conf.py
-        doconce subst "#'navbar_links':.+" "'navbar_links': [
-        	   ('Google', 'http://google.com', True),
-                   ('DocOnce formats',
-                    'http://hplgit.github.io/teamods/writing_reports/index.html',
-        	    True),
-        	   ]," mydoc.rst
-        python automake_sphinx.py
+    doconce format sphinx mydoc
+    doconce sphinx_dir theme=alabaster toc_depth=2 mydoc
+    # Auto edit conf.py
+    doconce subst "#'navbar_links':.+" "'navbar_links': [
+    	   ('Google', 'http://google.com', True),
+               ('DocOnce formats',
+                'http://hplgit.github.io/teamods/writing_reports/index.html',
+    	    True),
+    	   ]," mydoc.rst
+    python automake_sphinx.py
 
 .. _sec:underscore:
 
@@ -170,7 +263,7 @@ words with underscores in inline verbatim*, e.g.,
 
 .. code-block:: doconce
 
-        If you choose the `Enable_access` menu, ...
+    If you choose the `Enable_access` menu, ...
 
 The downside is that the word with underscores is typeset in monospace font.
 
@@ -178,23 +271,23 @@ The standard remedy in LaTeX is to insert a backslash before the underscore:
 
 .. code-block:: doconce
 
-        If you choose the Enable\_access menu, ...
+    If you choose the Enable\_access menu, ...
 
 but the backslash is not wanted in other formats. A Mako function can fix
 this:
 
 .. code-block:: doconce
 
-        <%
-        def underscorephrase(phrase):
-            if FORMAT in ('pdflatex', 'latex'):
-                return phrase.replace('_', '\\_')
-            else:
-                return phrase
-        %>
-        
-        # Some text:
-        If you choose the ${underscorephrase('Enable_access')}, ...
+    <%
+    def underscorephrase(phrase):
+        if FORMAT in ('pdflatex', 'latex'):
+            return phrase.replace('_', '\\_')
+        else:
+            return phrase
+    %>
+    
+    # Some text:
+    If you choose the ${underscorephrase('Enable_access')}, ...
 
 GitHub gh-pages will not display files starting with a dot or underscore
 ------------------------------------------------------------------------
@@ -214,11 +307,11 @@ A typical fix is
 
 .. code-block:: text
 
-        Terminal> git checkout gh-pages
-        Terminal> touch .nojekyll
-        Terminal> git add .nojekyll
-        Terminal> git commit -am updates
-        Terminal> git push origin gh-pages
+    Terminal> git checkout gh-pages
+    Terminal> touch .nojekyll
+    Terminal> git add .nojekyll
+    Terminal> git commit -am updates
+    Terminal> git push origin gh-pages
 
 GitHub gh-pages will not display files
 --------------------------------------
@@ -255,7 +348,7 @@ Windows to that in Unix:
 
 .. code-block:: text
 
-        Terminal> doconce subst '\r\n' '\n' mydoc.do.txt
+    Terminal> doconce subst '\r\n' '\n' mydoc.do.txt
 
 If you work on Windows, you probably have to avoid using the Mako preprocessor
 (it is not used unless you use Mako functions, variables, or control
@@ -283,16 +376,16 @@ end of the coloring. Here is an example:
 
 .. code-block:: doconce
 
-        color{blue}{Here is some text
-        to be typeset in blue.
-        
-        ===== Here is a new subsection =====
-        label{sec:subsec}
-        
-        More text to be typeset in blue, but the right brace in the label
-        will end the coloring. There is no way out of this except for
-        moving constructions with braces (`label`, `cite`) out of the
-        text to be colored.
+    color{blue}{Here is some text
+    to be typeset in blue.
+    
+    ===== Here is a new subsection =====
+    label{sec:subsec}
+    
+    More text to be typeset in blue, but the right brace in the label
+    will end the coloring. There is no way out of this except for
+    moving constructions with braces (`label`, `cite`) out of the
+    text to be colored.
 
 .. _trouble:latex:envir:native:
 
@@ -358,12 +451,12 @@ this purpose. For example,
 
 .. code-block:: doconce
 
-        !bblock (large) So - how to be excellent?
-        <linebreak>
-        Excellence is not a planned goal - it is the corollary of
-        deep passion, very much hard (and exciting!)
-        work, and *thinking constantly about it*.
-        !eblock
+    !bblock (large) So - how to be excellent?
+    <linebreak>
+    Excellence is not a planned goal - it is the corollary of
+    deep passion, very much hard (and exciting!)
+    work, and *thinking constantly about it*.
+    !eblock
 
 is rendered as
 
@@ -386,9 +479,9 @@ More vertical space is obtained by repeated use of ``<linebreak>``:
 
 .. code-block:: text
 
-        <linebreak>
-        <linebreak>
-        <linebreak>
+    <linebreak>
+    <linebreak>
+    <linebreak>
 
 .. _trouble:copyright:
 
@@ -440,7 +533,7 @@ In LaTeX you can use your native language package, e.g.,
 
 .. code-block:: text
 
-        doconce replace '% insert custom LaTeX commands...' '\\usepackage[norsk]{babel} mydoc.tex
+    doconce replace '% insert custom LaTeX commands...' '\\usepackage[norsk]{babel} mydoc.tex
 
 to get the Norwegian language.
 
@@ -448,14 +541,14 @@ In other formats you have do more manual substitutions:
 
 .. code-block:: text
 
-        doconce replace Figure Figur mydoc.html
-        doconce replace figure figur mydoc.html
+    doconce replace Figure Figur mydoc.html
+    doconce replace figure figur mydoc.html
 
 or both in one command using regular expressions:
 
 .. code-block:: text
 
-        doconce stubst '([Ff]igur)e' '\g<1>' mydoc.html
+    doconce stubst '([Ff]igur)e' '\g<1>' mydoc.html
 
 Spellcheck reports mistakes that I cannot find
 ----------------------------------------------
@@ -470,7 +563,7 @@ If the spellcheck command is
 
 .. code-block:: text
 
-        doconce spellcheck mydoc
+    doconce spellcheck mydoc
 
 the file ``tmp_stripped_mydoc.do.txt`` contains the text that is actually
 run through the spellchecker (``ispell``). Search for the misspelled word there and
@@ -485,10 +578,10 @@ commands to search for such errors:
 
 .. code-block:: text
 
-        grep --color=auto -E '\biu\b' tmp_stripped_mydoc.do.txt
-        grep --color=auto -E ' iu' tmp_stripped_mydoc.do.txt
-        grep --color=auto -E 'iu ' tmp_stripped_mydoc.do.txt
-        grep --color=auto -E 'iu' tmp_stripped_mydoc.do.txt
+    grep --color=auto -E '\biu\b' tmp_stripped_mydoc.do.txt
+    grep --color=auto -E ' iu' tmp_stripped_mydoc.do.txt
+    grep --color=auto -E 'iu ' tmp_stripped_mydoc.do.txt
+    grep --color=auto -E 'iu' tmp_stripped_mydoc.do.txt
 
 Spellcheck reports a lot of mistakes related to LaTeX math
 ----------------------------------------------------------
@@ -564,13 +657,13 @@ Links of the type
 
 .. code-block:: text
 
-        see the "examples directory": "src/examples"
+    see the "examples directory": "src/examples"
 
 do not work well. You need to link to a specific HTML file:
 
 .. code-block:: text
 
-        see the "examples directory": "src/examples/index.html"
+    see the "examples directory": "src/examples/index.html"
 
 We recommend to put all files you link to in a ``_static`` directory
 if you intend to use the ``sphinx`` output. This guarantees that all
@@ -588,16 +681,25 @@ in links are allowed if the whole link is typeset in verbatim:
 
 .. code-block:: text
 
-        see the directory "`examples`": "src/examples/index.html".
+    see the directory "`examples`": "src/examples/index.html".
 
 However, the following will not be typeset correctly:
 
 .. code-block:: text
 
-        see the "`examples`": "src/examples/index.html" directory.
+    see the "`examples`": "src/examples/index.html" directory.
 
 The back-ticks must be removed, or the text can be reformulated as
 in the line above it.
+
+Inline comment does not handle verbatim or emphasis right
+---------------------------------------------------------
+
+Inline comments lead (in LaTeX output formats) to shortened titles for
+a table of inline comments, and the shortening is done naively: the
+title can cut a verbatim expression in the middle. There is no other
+way around that to rewrite the inline comment. (The title consists of
+the first 50 characters or so of the text.
 
 Inline verbatim code or boldface is not detected when used with a footnote
 --------------------------------------------------------------------------
@@ -609,10 +711,10 @@ and the footnote bracket:
 
 .. code-block:: doconce
 
-        The construction `def f(x,y):`[^whitespace] is standard.
-        
-        [^whitespace]: Well, a space before the `y` argument, as in `f(x, y)`,
-        would be the standard.
+    The construction `def f(x,y):`[^whitespace] is standard.
+    
+    [^whitespace]: Well, a space before the `y` argument, as in `f(x, y)`,
+    would be the standard.
 
 Inline verbatim code is not detected
 ------------------------------------
@@ -642,15 +744,15 @@ or with
 
 .. code-block:: text
 
-        Terminal> doconce guess_encoding myfile.do.txt
+    Terminal> doconce guess_encoding myfile.do.txt
 
 If the encoding is different from ASCII or UTF-8, say latin1, convert to UTF-8
 using either of the Unix commands
 
 .. code-block:: text
 
-        Terminal> doconce change_encoding latin1 utf-8 myfile.do.txt
-        Terminal> iconv -t utf-8 -f latin1 myfile.do.txt --output newfile
+    Terminal> doconce change_encoding latin1 utf-8 myfile.do.txt
+    Terminal> iconv -t utf-8 -f latin1 myfile.do.txt --output newfile
 
 Wrong Norwegian characters
 --------------------------
@@ -708,7 +810,7 @@ The remedy is to split the document into smaller pieces by inserting
 
 .. code-block:: text
 
-        !split
+    !split
 
 for every new page. After ``doconce format html mydoc``, run
 ``doconce split_html mydoc.html`` to get the document split into
@@ -725,7 +827,7 @@ and double single quotes to typeset quotes, so the right form is
 
 .. code-block:: text
 
-        "This is a ``link text'' to google": "http://google.com".
+    "This is a ``link text'' to google": "http://google.com".
 
 It appears as (typset in a ``quote`` admon):
 
@@ -797,14 +899,14 @@ Two strings with bold or emphasize after each other will not work:
 
 .. code-block:: doconce
 
-        # Not properly interpreted:
-        Here is a _bold_ _word_.
-        # This is how to do it:
-        Here is a _bold word_.
-        
-        # Same with emphasize/italic:
-        Cannot write *two emphasized* *words*,
-        but must write *two emphasized words*.
+    # Not properly interpreted:
+    Here is a _bold_ _word_.
+    # This is how to do it:
+    Here is a _bold word_.
+    
+    # Same with emphasize/italic:
+    Cannot write *two emphasized* *words*,
+    but must write *two emphasized words*.
 
 The wrong syntax implies that one of the texts inside
 bold/italic tags will appear with DocOnce syntax in the output.
@@ -817,8 +919,8 @@ emphasized font fails:
 
 .. code-block:: doconce
 
-        _It is important that $u_1=2$!_
-        *It is important that `a*b=b*a` in any computer language*.
+    _It is important that $u_1=2$!_
+    *It is important that `a*b=b*a` in any computer language*.
 
 The reason is that boldface or emphasize text cannot contain the
 special characters dollar sign and backtick. However, if these
@@ -830,16 +932,16 @@ emphasize or boldface tags*:
 
 .. code-block:: doconce
 
-        _It is important that_ $u_1=2$!
-        *It is important that* `a*b=b*a` *in any computer language*.
+    _It is important that_ $u_1=2$!
+    *It is important that* `a*b=b*a` *in any computer language*.
 
 Another similar example is the mix of ``**text**`` syntax
 with braces inside the text. For example,
 
 .. code-block:: doconce
 
-        color{blue}{However, here a blue color specification
-        fails: $\frac{1}{2}\omega^2$.}
+    color{blue}{However, here a blue color specification
+    fails: $\frac{1}{2}\omega^2$.}
 
 The text part is interpreted as string with ``However`` and lasting up
 to the first right brace, which is in ``\frac{1}``. A remedy is, as above,
@@ -848,8 +950,8 @@ and use a ``\textcolor`` command inside the mathematics:
 
 .. code-block:: doconce
 
-        color{blue}{However, here a blue color specification
-        fails:} $\textcolor{red}{\frac{1}{2}\omega^2}$.}
+    color{blue}{However, here a blue color specification
+    fails:} $\textcolor{red}{\frac{1}{2}\omega^2}$.}
 
 Mathematics and code in blocks are invisible when inline tagging is
 interpreted and translated. Therefore, a specification as follows
@@ -857,15 +959,15 @@ works well:
 
 .. code-block:: doconce
 
-        color{red}{This equation,
-        
-        !bt
-        \begin{equation}
-        a = b
-        label{eq1}
-        \end{equation}
-        !et
-        is meant to be in red and it works.}
+    color{red}{This equation,
+    
+    !bt
+    \begin{equation}
+    a = b
+    label{eq1}
+    \end{equation}
+    !et
+    is meant to be in red and it works.}
 
 The rules are that ``*text*``, ``_text_``, and ``**text**``
 employs a simple rule: ``text`` lasts up to the first end-tag
@@ -900,43 +1002,43 @@ to HTML, the JSON file may look like this:
 
 .. code-block:: text
 
-        {
-            "filename" : "mydoc",
-            "title" : "Title of the document",
-            "authors" : [
-                {
-                    "name" : "Hans Petter Langtangen",
-                    "sort" : "Langtangen, Hans Petter"
-                }
-            ],
-            "rights" : "Public Domain",
-            "language" : "en",
-            "publisher": "hpl",
-            "subjects" : [ "Science" ],
-            "contributors" : [
-                {
-                    "name" : "Hans Petter Langtangen",
-                    "role" : "author"
-                }
-            ],
-            "identifier" : {
-                "scheme" : "URL",
-                "value" : "http://somewhere.net"
-            },
-            "contents" : [
-                {
-                    "type" : "text",
-                    "source" : "._mydoc*.html"
-                }
-            ],
-            "toc" : {
-                "depth" : 2,
-                "parse" : [ "text" ],
-                "generate" : {
-                    "title" : "Index"
-                }
+    {
+        "filename" : "mydoc",
+        "title" : "Title of the document",
+        "authors" : [
+            {
+                "name" : "Hans Petter Langtangen",
+                "sort" : "Langtangen, Hans Petter"
+            }
+        ],
+        "rights" : "Public Domain",
+        "language" : "en",
+        "publisher": "hpl",
+        "subjects" : [ "Science" ],
+        "contributors" : [
+            {
+                "name" : "Hans Petter Langtangen",
+                "role" : "author"
+            }
+        ],
+        "identifier" : {
+            "scheme" : "URL",
+            "value" : "http://somewhere.net"
+        },
+        "contents" : [
+            {
+                "type" : "text",
+                "source" : "._mydoc*.html"
+            }
+        ],
+        "toc" : {
+            "depth" : 2,
+            "parse" : [ "text" ],
+            "generate" : {
+                "title" : "Index"
             }
         }
+    }
 
 Just edit this file to your needs, save it as ``mydoc.json`` and run
 ``epubmaker.py mydoc.json`` to produce ``mydoc.epub``.
@@ -1009,22 +1111,22 @@ item must be perfectly aligned. Here are some typical errors:
 
 .. code-block:: doconce
 
-         o a rectangular pulse
-         o  a Gaussian pulse
-         o one period of a cosine pulse
-         o half a period of
-          a cosine pulse
+     o a rectangular pulse
+     o  a Gaussian pulse
+     o one period of a cosine pulse
+     o half a period of
+      a cosine pulse
 
 Problem: ``a Gaussian pulse`` is not properly aligned, ``a cosine pulse`` on
 the last line is not properly aligned. The correct formatting is
 
 .. code-block:: doconce
 
-         o a rectangular pulse
-         o a Gaussian pulse
-         o one period of a cosine pulse
-         o half a period of
-           a cosine pulse
+     o a rectangular pulse
+     o a Gaussian pulse
+     o one period of a cosine pulse
+     o half a period of
+       a cosine pulse
 
 How can I get an overview of all files that are included in a document?
 -----------------------------------------------------------------------
@@ -1033,10 +1135,100 @@ Suppose the root (main) document is ``mydoc.do.txt``. Run
 
 .. code-block:: text
 
-        Terminal> doconce include_map mydoc.do.txt
+    Terminal> doconce include_map mydoc.do.txt
 
 The output lists all the recursive ``#include`` Preprocess statements so you
 can see how all files are included.
+
+How to write the dollar sign for an amount in dollars?
+------------------------------------------------------
+
+If you want to write ``$1,000``, this is not trivial, because the dollar
+sign is used for inline math formulas, and everything from this dollar sign
+up to the next is interpreted as a math formula.
+
+The solution in DocOnce is to prefix the dollar sign by a backslash (same
+syntax as required by LaTeX).
+This ensures correct output in all output formats.
+
+Another solution is to pre- or postfix the amount by USD instead of the
+dollar sign.
+
+.. _trouble:Externaldocuments:
+
+Problems with Externaldocuments specifications
+----------------------------------------------
+
+.. index:: Externaldocuments:
+
+The ``# Externaldocuments:`` command is used for *generalized
+references* to lables in other documents. The command specifies
+directories with ``.aux`` files and provides the necessary information
+for using ``xr`` package for external references in case of LaTeX
+output. For all other formts an alternative user-given text is used
+and ``# Externaldocuments:`` has no effect.  A typical use case is that
+one book refers to another book.  This may cause trouble when the
+``.tex`` and ``.aux`` files specified in the ``# Externaldocuments:``
+command do not exist. A quick fix is to follow the advice in the error
+message and use the ``touch`` command to create empty files so DocOnce
+does not abort the execution. However, the only real fix is to install
+all the directory trees specified in the ``# Externaldocuments:``
+command.
+
+References to such external documents may also cause trouble when
+sending the ``.tex`` files for a book to a publisher, since the
+``\externaldocument{}`` commands in the ``.tex`` file
+in this file will refer to ``.aux``
+files in other directories (which the publisher then must have).
+A good fix to this problem is provided by the sample packing
+script `pack_Springer.sh <https://github.com/hplgit/setup4book-doconce/blob/master/doc/src/book/pack_Springer.sh>`__,
+which calls up another script `grab_stylefiles.py <https://github.com/hplgit/setup4book-doconce/blob/master/doc/src/book/grab_stylefiles.py>`__,
+which automatically copies the ``.aux`` files in question to a subdirectory and
+autoedits the main ``.tex`` for the DocOnce document accordingly. The
+purpose of ``pack_Springer.sh`` is to make a directory tree with all
+files (including stylefiles) needed to compile a LaTeX version of the
+document. This tree can then be sent to the publisher and is self contained.
+
+Another fix for problems with the ``# Externaldocuments:`` command is to
+hardcode references when files needs to be sent to a publisher. Typically,
+one has
+
+.. code-block:: doconce
+
+    % if not FOR_PUBLISHER:
+    # Externaldocuments: ../../some/path, ../some/other/path
+    % endif
+
+Every generalized reference to a label in the specified external
+documents must have a special case when files are meant
+for a publisher:
+
+.. code-block:: doconce
+
+    % if FOR_PUBLISHER
+    ref[Section 4.2][ in
+    % else:
+    ref[Section ref{my:label}][ in
+    %endif
+    cite {book}][the section ``Guidelines'' in the document
+    "A note on everything": "http://..."].
+
+Setting ``FOR_PUBLISHER=True`` as part of the ``doconce format pdflatex``
+command will then effectively remove everything with the
+``# Externaldocuments:`` command and generalized references.
+
+What is the difference between doconce replace and doconce subst?
+-----------------------------------------------------------------
+
+``doconce replace`` replaces one text by another, exactly as the text is
+written. For example, ``doconce replace float double *.do.txt`` is the same as
+invoking an editor and replacing ``float`` by ``double`` in all files ``*.do.txt``.
+On the other hand, ``doconce subst`` works with *regular expressions*, so
+``doconce subst from to`` is the same as ``re.sub(from, to)`` in Python.
+You need experience with ``re.sub`` and regular expressions to take advantage
+of ``doconce subst``.
+Regular expressions are much more powerful for editing text, but also
+more complicated and errorprone.
 
 .. !split
 
@@ -1091,13 +1283,13 @@ as demonstrated here:
 
 .. code-block:: text
 
-        !bc mcod
-        %% Comment on the beginning of the line can be escaped by %%
-        if a > b
-          ${'%'} Indented comment needs this trick
-          c = a + b
-        end
-        !ec
+    !bc mcod
+    %% Comment on the beginning of the line can be escaped by %%
+    if a > b
+      ${'%'} Indented comment needs this trick
+      c = a + b
+    end
+    !ec
 
 The Mako preprocessor gives syntax error in Python code
 -------------------------------------------------------
@@ -1156,7 +1348,7 @@ For example,
 
 .. code-block:: doconce
 
-        ${\cal O}(\Delta x^2)$
+    ${\cal O}(\Delta x^2)$
 
 is valid LaTeX, but
 the dollar sign and curly braces confuse Mako. Rewrite such
@@ -1249,7 +1441,7 @@ Strange errors around code or TeX blocks in reST
 
 If ``idx`` commands for defining indices are placed inside paragraphs,
 and especially right before a code block, the reST translator
-(rst and sphinx formats) may get confused and produce strange
+(``rst`` and ``sphinx`` formats) may get confused and produce strange
 code blocks that cause errors when the reST text is transformed to
 other formats. The remedy is to define items for the index outside
 paragraphs.
@@ -1286,15 +1478,15 @@ can simulate that with a Mako variable:
 
 .. code-block:: doconce
 
-        <% counter = 0 %>
-        
-        <% counter += 1 %>
-        __Step ${counter}.__
-        Describe step. Add figure, code block, admon, etc.
-        
-        <% counter += 1 %>
-        __Step ${counter}.__
-        Describe next step.
+    <% counter = 0 %>
+    
+    <% counter += 1 %>
+    __Step ${counter}.__
+    Describe step. Add figure, code block, admon, etc.
+    
+    <% counter += 1 %>
+    __Step ${counter}.__
+    Describe next step.
 
 LaTeX code blocks inside lists look ugly
 ----------------------------------------
@@ -1311,12 +1503,12 @@ If you have a paragraph heading and then code right after,
 
 .. code-block:: doconce
 
-        __Heading.__
-        
-        !bc pycod
-        def f(x):
-            return 42
-        !ec
+    __Heading.__
+    
+    !bc pycod
+    def f(x):
+        return 42
+    !ec
 
 the generated LaTeX code is correct, but it is translated to PDF in
 a wrong way such that the heading appears *after* the code.
@@ -1341,7 +1533,7 @@ Math formulas are not rendered properly
 HTML generated by Sphinx applies MathJax for rendering LaTeX mathematics.
 Due to the way Sphinx embeds these formulas in HTML, sometimes the
 formulas are not being rendered and instead the pure LaTeX code is
-put in a box.
+put in a box. The same formulas may appear right in pure HTML.
 
 The first thing to do is to check that the LaTeX generated PDF format
 shows the formula correctly. The next step is to compile to HTML and
@@ -1352,9 +1544,24 @@ There are basically two remedies: either drop Sphinx and go for HTML, or
 try to rewrite the formula and try until the Sphinx-generated
 HTML code manages to render it.
 
-The typical problems encountered may include
-formulas with use of ``\bar\boldsymbol{}``
-and align environments with multiple equations.
+Copy the problematic typesetting to a minimalistic document. If the
+original document is split into pieces via
+``doconce split_rst``, make sure your minimalistic document also contains
+a ``!split`` command and is split into at least two pieces. This is because
+equations get tags when documents are split, and with the ``\tag{}`` command,
+it seems that sphinx rewrites the MathJax code, and this may cause
+problems. This also means that dropping ``doconce split_rst`` and having
+one big HTML file for Sphinx can make the rendering of mathematics
+(much) easier.
+
+Some typical problems encountered are listed below.
+
+ * Formulas with use of ``\bar\boldsymbol{}``.
+
+ * Align environments with multiple equations. Try to simplify
+   typesetting.
+
+ * ``\mbox`` or ``\hbox`` commands in equations.
 
 Sphinx directory generation aborts with "label empty or too long"
 -----------------------------------------------------------------
@@ -1364,8 +1571,8 @@ The solution is to specify a shorter title when running ``doconce sphinx_dir`` (
 
 .. code-block:: text
 
-        Terminal> doconce sphinx_dir title="Short Title" \
-                  authors="A. B. Crunch" theme=pyramid mydoc
+    Terminal> doconce sphinx_dir title="Short Title" \
+              authors="A. B. Crunch" theme=pyramid mydoc
 
 Title level inconsistent
 ------------------------
@@ -1459,6 +1666,59 @@ If the table appears at the end of the environment (e.g., a theorem or
 example environment), add a sentence between the table and
 the end-of-environment command.
 
+Strange ``begin{description}`` error arising from math
+------------------------------------------------------
+
+If you have an inline math formula that is split over two lines, and the
+formula continues with a minus sign on a line, this minus sign may
+be interpreted as a *description list* and typeset as a list, which is
+nonsense. The remedy is to move the minus sign at the beginning of the
+line to the end of the last line.
+
+Inline figures should have more vertical space
+----------------------------------------------
+
+You can insert ``<linebreak>`` (which gives a vertical space if
+alone on a line):
+
+.. code-block:: doconce
+
+    <linebreak>
+    <linebreak>
+    
+    FIGURE: [...]
+    
+    <linebreak>
+    <linebreak>
+
+How can I use a special package for typesetting code?K (not ``pyg``, ``lst``, or ``vrb``)
+-----------------------------------------------------------------------------------------
+
+One gets the impression that ``--latex_code_style=`` has only the options
+for Pygments, Listings, or the Verbatim packages, but in fact any package
+can be used.
+
+Suppose you have the fictitious code enviroment ``ultimate``
+from the package ``compcode`` that you want to use, together with
+a yellow backgrund, and with some
+environment-specific parameters ``arg1`` and ``arg2``. Then you can write
+
+.. code-block:: text
+
+    Terminal> doconce format pdflatex mydoc --latex_packages=compcode \
+             '--latex_code_style=ultimate-yellow2[arg1=val1,arg2=val2]'
+
+The resulting LaTeX code in ``mydoc.tex`` becomes
+
+.. code-block:: latex
+
+    \begin{cod}{cbg_yellow2}\begin{ultimate}[arg1=val1,arg2=val2]
+    ...
+    \end{ultimate}\end{cod}
+
+In this way, you can use any environment in any package for typesetting
+code.
+
 Sphinx and HTML show pygmetized code, but not LaTeX
 ---------------------------------------------------
 
@@ -1467,8 +1727,8 @@ to get pygmentized computer code in LaTeX:
 
 .. code-block:: text
 
-        Terminal> doconce ptex2tex mydoc envir=minted
-        Terminal> pdflatex -shell-escape mydoc
+    Terminal> doconce ptex2tex mydoc envir=minted
+    Terminal> pdflatex -shell-escape mydoc
 
 LaTeX error because of underscores
 ----------------------------------
@@ -1480,12 +1740,12 @@ to insert LaTeX-specific text with a backslash, e.g.,
 
 .. code-block:: doconce
 
-        Here is a word underscore:
-        %% if FORMAT in ('latex', 'pdflatex'):
-        my\_word
-        %% else
-        my_word
-        %% endif
+    Here is a word underscore:
+    %% if FORMAT in ('latex', 'pdflatex'):
+    my\_word
+    %% else
+    my_word
+    %% endif
 
 Usually, inline verbatim text is way to go with underscores anyway.
 
@@ -1496,8 +1756,8 @@ Suppose you have a URL reference like
 
 .. code-block:: text
 
-        ..which can be found in the file "my_file.txt":
-        "http://some.where.net/web/dir/my_file.txt".
+    ..which can be found in the file "my_file.txt":
+    "http://some.where.net/web/dir/my_file.txt".
 
 LaTeX will stop with a message about a missing dollar sign. The reason
 is that underscores in link texts need to be preceded by a backslash.
@@ -1507,8 +1767,8 @@ The remedy is to format the link text with inline verbatim tags (backticks):
 
 .. code-block:: text
 
-        ..which can be found in the file "`my_file.txt`":
-        "http://some.where.net/web/dir/my_file.txt".
+    ..which can be found in the file "`my_file.txt`":
+    "http://some.where.net/web/dir/my_file.txt".
 
 Verbatim text in links works fine with underscores.
 
@@ -1519,7 +1779,7 @@ A known problem is to have the word
 
 .. code-block:: text
 
-        \Verb
+    \Verb
 
 in (admon) headings. Otherwise inline verbatim should work, both in
 section headings and admon headings.
@@ -1541,22 +1801,22 @@ some of the variables in ``newmdenv`` environments:
 
 .. code-block:: bash
 
-        name=tmp1
-        # Edits for mdframed environments
-        doconce format pdflatex $name --latex_code_style=vrb
-        doconce subst '  backgroundcolor=.+' \
-                '  backgroundcolor=white,' $name.tex
-        doconce subst '  frametitlebackgroundcolor=.+' \
-                '  frametitlebackgroundcolor=white,' $name.tex
-        doconce subst '  leftmargin=.+' '  leftmargin=3cm,' $name.tex
-        doconce subst '  rightmargin=.+' \
-                '  rightmargin=3cm,\n  font=\\tiny,' $name.tex
-        doconce subst '  frametitlerule=.+' \
-                '  frametitlerule=false,' $name.tex
-        doconce subst '  linewidth=.+' '  linewidth=0pt,' $name.tex
-        # Edits for fontsize in Verbatim
-        doconce replace ',fontsize=\fontsize{9pt}{9pt}' \
-                ',fontsize=\fontsize{6pt}{6pt}' $name.tex
+    name=tmp1
+    # Edits for mdframed environments
+    doconce format pdflatex $name --latex_code_style=vrb
+    doconce subst '  backgroundcolor=.+' \
+            '  backgroundcolor=white,' $name.tex
+    doconce subst '  frametitlebackgroundcolor=.+' \
+            '  frametitlebackgroundcolor=white,' $name.tex
+    doconce subst '  leftmargin=.+' '  leftmargin=3cm,' $name.tex
+    doconce subst '  rightmargin=.+' \
+            '  rightmargin=3cm,\n  font=\\tiny,' $name.tex
+    doconce subst '  frametitlerule=.+' \
+            '  frametitlerule=false,' $name.tex
+    doconce subst '  linewidth=.+' '  linewidth=0pt,' $name.tex
+    # Edits for fontsize in Verbatim
+    doconce replace ',fontsize=\fontsize{9pt}{9pt}' \
+            ',fontsize=\fontsize{6pt}{6pt}' $name.tex
 
 Note that these edits actually apply to all types of admonitions!
 More tailored edits must include the text of the entire environment definition.
@@ -1565,31 +1825,31 @@ Here is a possible test file:
 
 .. code-block:: doconce
 
-        ======= Heading =======
-        
-        Bla-bla.
-        
-        !bnotice Long box
-        % for i in range(10):
-        bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla,
-        % endfor
-        
-        !bt
-        \begin{align}
-        x &\in [0,1]\\
-        y &= sin(x)
-        \end{align}
-        !et
-        
-        !bc pycod
-        def myfuncf(x):
-            return sin(x)
-        !ec
-        
-        % for i in range(100):
-        bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla,
-        % endfor
-        !enotice
+    ======= Heading =======
+    
+    Bla-bla.
+    
+    !bnotice Long box
+    % for i in range(10):
+    bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla,
+    % endfor
+    
+    !bt
+    \begin{align}
+    x &\in [0,1]\\
+    y &= sin(x)
+    \end{align}
+    !et
+    
+    !bc pycod
+    def myfuncf(x):
+        return sin(x)
+    !ec
+    
+    % for i in range(100):
+    bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla, bla-bla,
+    % endfor
+    !enotice
 
 .. index:: user-defined environments
 
@@ -1612,7 +1872,7 @@ Use the ``--section_numbering=off`` option:
 
 .. code-block:: text
 
-        Terminal> doconce format pdflatex mydoc --section_numbering=off
+    Terminal> doconce format pdflatex mydoc --section_numbering=off
 
 LaTeX suddenly places figures differently
 -----------------------------------------
@@ -1632,10 +1892,10 @@ A DocOnce user wanted figure references to be as follows in LaTeX:
 
 .. code-block:: latex
 
-        % if current page is different from figure page:
-        ... Figure \ref{my:fig} on page \pageref{my:fig}.
-        % if current page is the same as the figure page:
-        ... Figure \ref{my:fig}.
+    % if current page is different from figure page:
+    ... Figure \ref{my:fig} on page \pageref{my:fig}.
+    % if current page is the same as the figure page:
+    ... Figure \ref{my:fig}.
 
 All other formats should emit the standard treatment of a DocOnce
 figure reference with ``ref``.
@@ -1664,21 +1924,21 @@ usage of the LaTeX packages ``ifthen`` and ``refcount``.
 
 .. code-block:: doconce
 
-        <%
-        def figref(label):
-            text = 'Figure ref{%s}' % label
-            if FORMAT in ('latex', 'pdflatex'):
-        	text += r'\ifthenelse{\equal{\thepage}{\getpagerefnumber{%s}}}{}{ on page \pageref{%s}}' % (label, label)
-            return text
-        %>
-        
-        FIGURE: [myfigfile, width=600 frac=0.8] My figure. label{my:fig}
-        
-        We refer to ${figref('my:fig')}.
-        
-        ...
-        # Much later
-        ..., as seen in ${figref('my:fig')}.
+    <%
+    def figref(label):
+        text = 'Figure ref{%s}' % label
+        if FORMAT in ('latex', 'pdflatex'):
+    	text += r'\ifthenelse{\equal{\thepage}{\getpagerefnumber{%s}}}{}{ on page \pageref{%s}}' % (label, label)
+        return text
+    %>
+    
+    FIGURE: [myfigfile, width=600 frac=0.8] My figure. label{my:fig}
+    
+    We refer to ${figref('my:fig')}.
+    
+    ...
+    # Much later
+    ..., as seen in ${figref('my:fig')}.
 
 The first reference is on the same page as the figure, and LaTeX should
 not write the page number, while the second reference is on another
@@ -1690,21 +1950,21 @@ The LaTeX output is something like this:
 
 .. code-block:: latex
 
-        \begin{figure}[h] % my:fig1
-          \centerline{\includegraphics[width=0.8\linewidth]{myfigfile.png}}
-          \caption{
-          My figure. \label{my:fig1}
-          }
-        \end{figure}
-        %\clearpage % flush figures sec:fig
-        
-        We refer to Figure~\ref{my:fig1}\ifthenelse{
-        \equal{\thepage}{\getpagerefnumber{my:fig}}}{}{ on page \pageref{my:fig1}}.
-        
-        ...
-        % Much later
-        ..., as seen in Figure~\ref{my:fig1}\ifthenelse{
-        \equal{\thepage}{\getpagerefnumber{my:fig}}}{}{ on page \pageref{my:fig1}}.
+    \begin{figure}[h] % my:fig1
+      \centerline{\includegraphics[width=0.8\linewidth]{myfigfile.png}}
+      \caption{
+      My figure. \label{my:fig1}
+      }
+    \end{figure}
+    %\clearpage % flush figures sec:fig
+    
+    We refer to Figure~\ref{my:fig1}\ifthenelse{
+    \equal{\thepage}{\getpagerefnumber{my:fig}}}{}{ on page \pageref{my:fig1}}.
+    
+    ...
+    % Much later
+    ..., as seen in Figure~\ref{my:fig1}\ifthenelse{
+    \equal{\thepage}{\getpagerefnumber{my:fig}}}{}{ on page \pageref{my:fig1}}.
 
 Error when running latex: You must have 'pygmentize' installed
 --------------------------------------------------------------
@@ -1715,8 +1975,8 @@ running ``latex`` or ``pdflatex``:
 
 .. code-block:: text
 
-        Terminal> latex -shell-escape file mydoc.tex
-        Terminal> pdflatex -shell-escape file mydoc.tex
+    Terminal> latex -shell-escape file mydoc.tex
+    Terminal> pdflatex -shell-escape file mydoc.tex
 
 Using ``doconce ptex2tex`` will turn on the minted style if specified as
 environment on the command line, while using ``ptex2tex`` requires the
@@ -1732,15 +1992,15 @@ more compact:
 
 .. code-block:: text
 
-        \usepackage[compact]{titlesec}
+    \usepackage[compact]{titlesec}
 
 as explained in the `titlesec <http://www.ctex.org/documents/packages/layout/titlesec.pdf>`__ package documentation.
 To retrieve the standard LaTeX headings, comment out this line or remove it:
 
 .. code-block:: text
 
-        Terminal> doconce format pdflatex mydoc
-        Terminal> doconce subst '\\usepack.+\{titlesec\} '' mydoc.p.tex
+    Terminal> doconce format pdflatex mydoc
+    Terminal> doconce subst '\\usepack.+\{titlesec\} '' mydoc.p.tex
 
 You can easily make the headings even smaller than the normal font
 by replacing ``[compact]`` by ``[compact,small]`` as parameter specification
@@ -1764,7 +2024,7 @@ to just remove these commands by
 
 .. code-block:: text
 
-        Terminal> doconce subst '\|\\pause\|\n' '' mydoc.tex
+    Terminal> doconce subst '\|\\pause\|\n' '' mydoc.tex
 
 before running ``pdflatex mydoc``.
 
@@ -1790,11 +2050,11 @@ and wrapping all ``\includegraphics`` in a shadow box:
 
 .. code-block:: text
 
-        Terminal> doconce format pdflatex mydoc
-        Terminal> doconce replace \
-                  'microtype}', 'microtype,fancybox,graphicx}' mydoc.p.tex
-        Terminal> doconce subst '(\\includegraphics\[.+\}\})' \
-                  '\\shadowbox{\g<1>}' mydoc.p.tex
+    Terminal> doconce format pdflatex mydoc
+    Terminal> doconce replace \
+              'microtype}', 'microtype,fancybox,graphicx}' mydoc.p.tex
+    Terminal> doconce subst '(\\includegraphics\[.+\}\})' \
+              '\\shadowbox{\g<1>}' mydoc.p.tex
 
 How can I use my fancy LaTeX environments?
 ------------------------------------------
@@ -1811,7 +2071,7 @@ If the problem is undefined control sequence involving
 
 .. code-block:: text
 
-        \code{...}
+    \code{...}
 
 the cause is usually a verbatim inline text (in back-ticks in the
 DocOnce file) spans more than one line. Make sure, in the DocOnce source,
@@ -1829,12 +2089,12 @@ Check if the inline verbatim contains typical LaTeX commands, e.g.,
 
 .. code-block:: text
 
-        some text with `\usepackage{mypack}` is difficult because
-        ptex2tex will replace this by \code{\usepackage{mypack}} and
-        then replace this by
-        {\fontsize{10pt}{10pt}\verb!\usepackage{mypack!}}
-        which is wrong because ptex2tex applies regex that don't
-        capture the second }
+    some text with `\usepackage{mypack}` is difficult because
+    ptex2tex will replace this by \code{\usepackage{mypack}} and
+    then replace this by
+    {\fontsize{10pt}{10pt}\verb!\usepackage{mypack!}}
+    which is wrong because ptex2tex applies regex that don't
+    capture the second }
 
 The remedy is to place verbatim LaTeX commands in verbatim
 blocks - that is safe.
@@ -1864,7 +2124,7 @@ a customized preamble text:
 
 .. code-block:: text
 
-        Terminal> doconce format latex mydoc --latex_preamble=mytop.tex
+    Terminal> doconce format latex mydoc --latex_preamble=mytop.tex
 
 If ``mytop.tex`` starts with a ``documentclass`` specification, the whole
 file becomes the complete preamble in ``mydoc.p.tex``, otherwise
@@ -1883,8 +2143,19 @@ Note also that ``doconce replace`` and ``doconce subst`` can be used
 after ``doconce format`` to tune the LaTeX code in the preamble (and
 elsewhere). Such automatic edits are useful if they are few.
 
-There are comment lines with ``--- begin preamble ---`` and
-``--- end preamble ---`` in the generated ``.tex`` file that can be
+There are comment lines with
+
+.. code-block:: text
+
+    --- begin preamble ---
+
+and
+
+.. code-block:: text
+
+    --- end preamble ---
+
+in the generated ``.tex`` file that can be
 used to replace the whole preamble by another text via a script.
 
 How can I control the placement of figures?
@@ -1900,14 +2171,14 @@ location:
 
 .. code-block:: latex
 
-        \usepackage{float}
-        \floatplacement{figure}{H}
+    \usepackage{float}
+    \floatplacement{figure}{H}
 
 The ``[t]`` option in figures must be removed:
 
 .. code-block:: text
 
-        doconce replace '{figure}[t]' '{figure}' mydoc.tex
+    doconce replace '{figure}[t]' '{figure}' mydoc.tex
 
 **Custom preamble file.**
 Place the lines above in a file ``mypreamble.tex`` and ask DocOnce to add
@@ -1918,14 +2189,14 @@ There is a special line in the ``.tex`` file,
 
 .. code-block:: text
 
-        %% insert custom LaTeX commands...
+    %% insert custom LaTeX commands...
 
 which can be used
 to insert desired commands, in this case by
 
 .. code-block:: text
 
-        doconce subst '% insert custom LaTeX.+' '\\usepackage{float}\n\floatplacement{figure}{H}' mydoc.tex
+    doconce subst '% insert custom LaTeX.+' '\\usepackage{float}\n\floatplacement{figure}{H}' mydoc.tex
 
 Note that you in both cases
 need to run the ``doconce replace`` above command to remove the ``[t]``
@@ -1939,15 +2210,15 @@ file looks like
 
 .. code-block:: latex
 
-        \documentclass[%
-        twoside,
-        ...
+    \documentclass[%
+    twoside,
+    ...
 
 you can do a simple substitution edit
 
 .. code-block:: text
 
-        Terminal> doconce subst 'twoside,' 'twocolumn,\ntwoside,' mydoc.tex
+    Terminal> doconce subst 'twoside,' 'twocolumn,\ntwoside,' mydoc.tex
 
 .. _trouble:bsol:code:
 
@@ -1958,12 +2229,12 @@ Sometimes a solution environment with code
 
 .. code-block:: doconce
 
-        !bsol
-        !bc cod
-        def f(x):
-            return x + 2
-        !ec
-        !esol
+    !bsol
+    !bc cod
+    def f(x):
+        return x + 2
+    !ec
+    !esol
 
 leads to strange behavior with verbatim LaTeX
 environment: the **Solution** heading appears after the code
@@ -1973,13 +2244,13 @@ order. A working remedy is to insert a text before the code:
 
 .. code-block:: doconce
 
-        Code:
-        !bsol
-        !bc cod
-        def f(x):
-            return x + 2
-        !ec
-        !esol
+    Code:
+    !bsol
+    !bc cod
+    def f(x):
+        return x + 2
+    !ec
+    !esol
 
 Subexercises (``subex{a)}``) triggers "Missing number, treated as zero"
 -----------------------------------------------------------------------
@@ -1992,11 +2263,11 @@ Be more specific with the substitution of ``section`` in the ``.tex`` file:
 
 .. code-block:: bash
 
-        doconce subst '\\section\{' '\\section*{' mydoc.tex
-        doconce subst '\\subsection\{' '\\subsection*{' mydoc.tex
-        # or
-        doconce replace '\section{' '\section*{' mydoc.tex
-        doconce replace '\subsection{' '\subsection*{' mydoc.tex
+    doconce subst '\\section\{' '\\section*{' mydoc.tex
+    doconce subst '\\subsection\{' '\\subsection*{' mydoc.tex
+    # or
+    doconce replace '\section{' '\section*{' mydoc.tex
+    doconce replace '\subsection{' '\subsection*{' mydoc.tex
 
 Page numbers appear in both header and footer
 ---------------------------------------------
@@ -2008,7 +2279,7 @@ the ``.tex`` file. Removing the page number in the footer is done by
 
 .. code-block:: text
 
-        Terminal> doconce subst '\\fancyfoot\[LE.+' '' mydoc.tex
+    Terminal> doconce subst '\\fancyfoot\[LE.+' '' mydoc.tex
 
 Page numbers in headers typically arise from using a special LaTeX style
 or the ``doconce format`` option ``--latex_fancy_header`` (but in the latter
@@ -2065,34 +2336,51 @@ extensions ("insert custom LaTeX commands...").
 
 .. code-block:: bash
 
-        #!/bin/bash
-        name=mydoc
-        
-        # Compile mydoc.do.txt to latex output mydoc.tex
-        doconce format pdflatex $name --latex_bibstyle=plos2015 --latex_code_style=vrb
-        
-        # Edit mydoc.tex file
-        doconce subst '% insert custom LaTeX commands...' '
-        \usepackage[aboveskip=1pt,labelfont=bf,labelsep=period,justification=raggedright,singlelinecheck=off]{caption}
-        % Text layout
-        \raggedright
-        \setlength{\parindent}{0.5cm}
-        \textwidth 5.25in
-        \textheight 8.75in
-        % Remove brackets from numbering in List of References
-        \makeatletter
-        \renewcommand{\@biblabel}[1]{\quad#1.}
-        \makeatother
-        \usepackage[right]{lineno}
-        \usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}' $name.tex
-        
-        # Compile the usual way
-        pdflatex $name
+    #!/bin/bash
+    name=mydoc
+    
+    # Compile mydoc.do.txt to latex output mydoc.tex
+    doconce format pdflatex $name --latex_bibstyle=plos2015 --latex_code_style=vrb
+    
+    # Edit mydoc.tex file
+    doconce subst '% insert custom LaTeX commands...' '
+    \usepackage[aboveskip=1pt,labelfont=bf,labelsep=period,justification=raggedright,singlelinecheck=off]{caption}
+    % Text layout
+    \raggedright
+    \setlength{\parindent}{0.5cm}
+    \textwidth 5.25in
+    \textheight 8.75in
+    % Remove brackets from numbering in List of References
+    \makeatletter
+    \renewcommand{\@biblabel}[1]{\quad#1.}
+    \makeatother
+    \usepackage[right]{lineno}
+    \usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}' $name.tex
+    
+    # Compile the usual way
+    pdflatex $name
 
 This example hopefully gives some ideas how to create specialized
 LaTeX output from DocOnce documents. If the journal style employs
 special LaTeX environments, see the section :ref:`trouble:latex:envir:native`
 how to utilize these from DocOnce.
+
+I want exercises to have small headings (not subsections)
+---------------------------------------------------------
+
+By default, DocOnce typesets exercises as subsections in LaTeX.
+However, the heading is defined by a newcommand ``exercisesection``
+(right after ``\begin{document}``) so it is easy to switch to any tailored
+heading. For example, we can use a paragraph heading:
+
+.. code-block:: text
+
+    Terminal> doconce subst \
+              '\{exercisesection\}\[1\]\{\\subsection\*' \
+    	  '{exercisesection}[1]{\paragraph' mydoc.tex
+
+This typesetting is perhaps more suitable if you have exercises scattered
+around in the document rather than grouped in sections.
 
 .. !split
 
@@ -2127,17 +2415,6 @@ is an easy-to-use service that gives you some HTML code to include
 in the document, typically inside a ``# #if FORMAT == "html"`` and ``# #endif``
 block.
 
-Translation aborts when labels are not defined
-----------------------------------------------
-
-By default, the DocOnce translation of HTML document aborts when references
-are found to lables not defined in the document (i.e., labels in other
-documents). This abortion can be annoying, and although it can be
-nullified by ``--no_abort``, that option also ignores other error messages.
-Instead, use ``--allow_refs_to_external_docs`` to allow references to labels
-in other documents. These references will of course not work, but the
-option can be handy, e.g., while compiling chapters for a book individually.
-
 MathJax formulas are not properly rendered
 ------------------------------------------
 
@@ -2150,14 +2427,21 @@ Here are some common problems:
 
  * Inline mathematics cannot have a space after the first dollar sign.
 
- * Equation environments must be '\[ ...\]`, ``equation``, ``equation*``,
-   ``align``, or ``align*`` - avoid all other types of environments.
+ * Equation environments must be ``\[ ...\]``, ``equation``, ``equation*``,
+   ``align``, or ``align*`` - avoid all other types of environments
+   (``split``, ``alignat``, and whatever).
 
- * Errors in formulas that LaTeX accepts lead to unrendered formulas in MathJax.
+ * Errors in formulas that LaTeX accepts may still
+   lead to unrendered formulas in MathJax.
 
-If the corresponding PDF output has the correct formula, one must try to
-rewrite the LaTeX mathematics so MathJax accepts it. MathJax can only
-handle a subset of what is legal mathematics in LaTeX.
+If the corresponding LaTeX-based PDF output has the correct formula,
+one must try to rewrite the LaTeX mathematics so MathJax accepts
+it. MathJax can only handle a subset of what is legal mathematics in
+LaTeX.
+
+Even if HTML is your target output format, it is strongly recommended to
+develop the mathematics with ``pdflatex`` as output to debug formulas
+before you try to render them in MathJax.
 
 How can I change the layout of the HTML page?
 ---------------------------------------------
@@ -2168,17 +2452,17 @@ Autoedits of the ``.html`` file
 The easiest way is to edit the HTML style or the HTML code directly.
 However, those edits are overwritten the next time you compile the
 DocOnce document to HTML. The edits should therefore be automated
-using ``doconce subst`` (for regular expression editing) or ``doconce replace``
+using the ``doconce subst`` (for regular expression editing) or ``doconce replace``
 (for plain text substitution editing) commands in the file where
 you run ``doconce format html mydoc``. For example, say you want narrower
 gray admonition boxes with a much thicker boundary. The ``.alert``
 style must then be changed, more precisely the ``border`` and the ``width``
-specification:
+specification. You can then add these statements after running ``doconce format html ...``:
 
 .. code-block:: bash
 
-        doconce replace 'border:1px' 'border:11px' mydoc.html
-        doconce replace 'width: 75%;' 'width: 35%' mydoc.html
+    doconce replace 'border:1px' 'border:11px' mydoc.html
+    doconce replace 'width: 75%;' 'width: 35%' mydoc.html
 
 Specify a ``.css`` file
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -2193,8 +2477,8 @@ one of the built-in DocOnce HTML styles by running
 
 .. code-block:: text
 
-        Terminal> doconce format html mydoc --css=pink.css \
-                  --html_style=blueish
+    Terminal> doconce format html mydoc --css=pink.css \
+              --html_style=blueish
 
 The result is a new file ``pink.css`` containing the specification
 of the ``blueish`` style. One can now change this ``pink.css`` file
@@ -2203,36 +2487,36 @@ headings with pink text, and pink color for visited or hovered hyperlinks:
 
 .. code-block:: html
 
-        h1 {
-            font-family:"comic sans ms";
-            width: 900px;
-            font-size: 48px;
-            text-align: center;
-            background: #EA00FF; /* pink */
-            border-style: solid;
-            border-width: 5px;
-            border-color: #FFFFFF;
-            padding: 20px;
-            margin: 20px;
-            margin-left: 10px;
-            color: white
-        }
-        h2, h3 {
-            font-family:"comic sans ms";
-            font-size: 18px;
-            color: #EA00FF;
-        }
-        h3 { font-size: 24px; }
-        a { color: #1e36ce; text-decoration:none; }
-        a:hover, a:visited { color: #EA00FF; /* pink */ }
-        ...
+    h1 {
+        font-family:"comic sans ms";
+        width: 900px;
+        font-size: 48px;
+        text-align: center;
+        background: #EA00FF; /* pink */
+        border-style: solid;
+        border-width: 5px;
+        border-color: #FFFFFF;
+        padding: 20px;
+        margin: 20px;
+        margin-left: 10px;
+        color: white
+    }
+    h2, h3 {
+        font-family:"comic sans ms";
+        font-size: 18px;
+        color: #EA00FF;
+    }
+    h3 { font-size: 24px; }
+    a { color: #1e36ce; text-decoration:none; }
+    a:hover, a:visited { color: #EA00FF; /* pink */ }
+    ...
 
 The rest of the file can remain unaltered. Running
 
 .. code-block:: text
 
-        Terminal> doconce format html mydoc --css=pink.css \
-                  --html_style=blueish
+    Terminal> doconce format html mydoc --css=pink.css \
+              --html_style=blueish
 
 will now render ``mydoc.html`` with pink headings and visited links.
 
@@ -2265,10 +2549,10 @@ simply by automatic editing of the HTML code in a little shell script:
 
 .. code-block:: text
 
-        doconce replace '<p class="caption">' \
-         '<p style="width: 50%; font-style: italic; color: blue">' mydoc.html
-        doconce replace '<hr class="figure">' \
-         '<hr style="width:60%, font-style: normal">' mydoc.html
+    doconce replace '<p class="caption">' \
+     '<p style="width: 50%; font-style: italic; color: blue">' mydoc.html
+    doconce replace '<hr class="figure">' \
+     '<hr style="width:60%, font-style: normal">' mydoc.html
 
 .. !split
 
@@ -2305,5 +2589,9 @@ Usually the HTML5 slides work best in Firefox.
 Online Python Tutor does not work
 ---------------------------------
 
-Seems to be a problem with reveal slides. The *Forward* button is not
-clickable.
+ * Check that there are no syntax errors in the code by running the code
+   as an ordinary file. Syntax errors lead to empty space and no tutor
+   in HTML output.
+
+ * Seems to be a problem with reveal slides. The *Forward* button is not
+   clickable.

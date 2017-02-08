@@ -13,11 +13,16 @@ does not work properly.
 
 2.
 """
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
+from past.builtins import basestring
 import re, sys
-from common import default_movie, plain_exercise, bibliography, \
-     cite_with_multiple_args2multiple_cites, insert_code_and_tex
-from misc import option
-
+from .common import default_movie, plain_exercise, bibliography, \
+     cite_with_multiple_args2multiple_cites, insert_code_and_tex, \
+     fix_ref_section_chapter
+from .misc import option
+from .doconce import errwarn
 
 def matlabnb_author(authors_and_institutions, auth2index,
                  inst2index, index2inst, auth2email):
@@ -42,7 +47,7 @@ def matlabnb_code(filestr, code_blocks, code_block_types,
         if m:
             envir = m.group(1)
             if envir not in ('equation', 'equation*'):
-                print '*** warning: \\begin{%s}-\\end{%s} does not work in Matlab notebooks' % (envir, envir)
+                errwarn('*** warning: \\begin{%s}-\\end{%s} does not work in Matlab notebooks' % (envir, envir))
             tex_blocks[i] = re.sub(r'\\begin{%s}\s+' % envir, '', tex_blocks[i])
             tex_blocks[i] = re.sub(r'\\end{%s}\s+' % envir, '', tex_blocks[i])
         tex_blocks[i] = re.sub(r'\\\[', '', tex_blocks[i])
@@ -61,7 +66,7 @@ def matlabnb_code(filestr, code_blocks, code_block_types,
                 if not (line.startswith('!bc') or line.startswith('!ec'))]) + '\n'
 
     # Insert % at the beginning of each line
-    from common import _CODE_BLOCK, _MATH_BLOCK
+    from .common import _CODE_BLOCK, _MATH_BLOCK
     code_line = r'^\d+ ' + _CODE_BLOCK
     code_line_problem = r' (\d+ ' + _CODE_BLOCK + ')'
     math_line = r'^\d+ ' + _MATH_BLOCK
@@ -110,24 +115,7 @@ def matlabnb_code(filestr, code_blocks, code_block_types,
     return filestr
 
 def matlabnb_ref_and_label(section_label2title, format, filestr):
-    # .... see section ref{my:sec} is replaced by
-    # see the section "...section heading..."
-    pattern = r'[Ss]ection(s?)\s+ref\{'
-    replacement = r'the section\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    pattern = r'[Cc]hapter(s?)\s+ref\{'
-    replacement = r'the chapter\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    # Need special adjustment to handle start of sentence (capital) or not.
-    pattern = r'([.?!]\s+|\n\n|[%=~-]\n+)the (sections?|chapters?)\s+ref'
-    replacement = r'\g<1>The \g<2> ref'
-    filestr = re.sub(pattern, replacement, filestr)
-
-    # Remove Exercise, Project, Problem in references since those words
-    # are used in the title of the section too
-    pattern = r'(the\s*)?([Ee]xercises?|[Pp]rojects?|[Pp]roblems?)\s+ref\{'
-    replacement = r' ref{'
-    filestr = re.sub(pattern, replacement, filestr)
+    filestr = fix_ref_section_chapter(filestr, format)
 
     # remove label{...} from output (when only label{} on a line, remove
     # the newline too, leave label in figure captions, and remove all the rest)
@@ -144,7 +132,7 @@ def matlabnb_ref_and_label(section_label2title, format, filestr):
         filestr = filestr.replace('ref{%s}' % label,
                                   '"%s"' % section_label2title[label])
 
-    from common import ref2equations
+    from .common import ref2equations
     filestr = ref2equations(filestr)
 
     return filestr
@@ -173,7 +161,7 @@ def matlabnb_index_bib(filestr, index, citations, pubfile, pubdata):
 
     return filestr
 
-def matlabnb_toc(sections):
+def matlabnb_toc(sections, filestr):
     # Find minimum section level
     tp_min = 4
     for title, tp, label in sections:
@@ -330,7 +318,7 @@ def define(FILENAME_EXTENSION,
         }
 
     CODE['matlabnb'] = matlabnb_code
-    from common import DEFAULT_ARGLIST
+    from .common import DEFAULT_ARGLIST
     ARGLIST['matlabnb'] = DEFAULT_ARGLIST
     FIGURE_EXT['matlabnb'] = {
         'search': ('.png', '.gif', '.jpg', '.jpeg', '.pdf'),  #.pdf?
@@ -348,14 +336,14 @@ def define(FILENAME_EXTENSION,
         'separator': '\n',
         }
     CROSS_REFS['matlabnb'] = matlabnb_ref_and_label
-    from html import html_table
+    from .html import html_table
     TABLE['matlabnb'] = html_table
     #TABLE['matlabnb'] = matlabnb_table
     EXERCISE['matlabnb'] = plain_exercise
     INDEX_BIB['matlabnb'] = matlabnb_index_bib
     TOC['matlabnb'] = matlabnb_toc
 
-    from common import indent_lines
+    from .common import indent_lines
     ENVIRS['matlabnb'] = {
         'warning':   lambda block, format, title='Warning', text_size='normal':
            matlabnb_box(block, title),

@@ -51,7 +51,7 @@ system doconce split_html testdoc.html --method=space10
 cp testdoc.html testdoc_no_solutions.html
 
 system doconce format html testdoc $ex  # just produce the mako file
-doconce extract_exercises tmp_mako__testdoc.do.txt --filter=ipynb
+doconce extract_exercises tmp_mako__testdoc.do.txt --exercise_numbering=section --filter=ipynb
 
 system doconce format latex testdoc --without_answers --without_solutions $ex -DSOMEVAR --sections_down --number_all_equations --latex_packages=varioref --cite_doconce
 cp testdoc.p.tex testdoc_no_solutions.p.tex
@@ -419,6 +419,14 @@ system pdflatex $name
 cp $name.pdf movie_demo
 
 system doconce format plain movies
+
+# Test locale support for html and pdflatex
+doconce format html locale --html_style=bootstrap_FlatUI --language=Norwegian --encoding=utf-8
+doconce format pdflatex locale --latex_code_style=vrb --language=Norwegian --encoding=utf-8
+pdflatex locale
+makeindex locale
+pdflatex locale
+pdflatex locale
 
 cd Springer_T2
 bash -x make.sh

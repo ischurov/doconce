@@ -6,6 +6,7 @@
 
 # The script is based on packages listed in debpkg_doconce.txt.
 
+from __future__ import print_function
 logfile = 'tmp_output.log'  # store all output of all operating system commands
 f = open(logfile, 'w'); f.close()  # touch logfile so it can be appended
 
@@ -13,16 +14,16 @@ import subprocess, sys
 
 def system(cmd):
     """Run system command cmd."""
-    print cmd
+    print(cmd)
     try:
         output = subprocess.check_output(cmd, shell=True,
                                          stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        print 'Command\n  %s\nfailed.' % cmd
-        print 'Return code:', e.returncode
-        print e.output
+        print('Command\n  %s\nfailed.' % cmd)
+        print('Return code:', e.returncode)
+        print(e.output)
         sys.exit(1)
-    print output
+    print(output)
     f = open(logfile, 'a'); f.write(output); f.close()
 
 system('sudo apt-get update --fix-missing')
@@ -75,6 +76,9 @@ system('sudo pip install -e git+https://github.com/hplgit/preprocess#egg=preproc
 
 # Publish for handling bibliography
 system('sudo pip install python-Levenshtein')
+system('sudo apt-get -y install libxml2-dev')
+system('sudo apt-get -y install libxslt1-dev')
+system('sudo apt-get -y install zlib1g-dev')
 system('sudo pip install lxml')
 system('sudo pip install -e hg+https://bitbucket.org/logg/publish#egg=publish')
 
@@ -88,7 +92,8 @@ system('sudo pip install -e git+https://github.com/ryan-roemer/sphinx-bootstrap-
 system('sudo pip install -e hg+https://bitbucket.org/miiton/sphinxjp.themes.solarized#egg=sphinxjp.themes.solarized')
 system('sudo pip install -e git+https://github.com/shkumagai/sphinxjp.themes.impressjs#egg=sphinxjp.themes.impressjs')
 system('sudo pip install -e git+https://github.com/kriskda/sphinx-sagecell#egg=sphinx-sagecell')
-system('sudo pip install tinkerer')
+# tinkerer has several themes: minimal5, modern5, flat, dark, responsive
+#pip install tinkerer --upgrade
 
 # Runestone sphinx books
 system('sudo pip install sphinxcontrib-paverutils')
@@ -103,11 +108,11 @@ system('sudo pip install -e git+https://github.com/hplgit/pygments-doconce#egg=p
 system('sudo pip install beautifulsoup4')
 system('sudo pip install html5lib')
 
-# ptex2tex is not needed if --latex_code_style= option is used
+# ptex2tex is not needed if the --latex_code_style= option is used
 
 cmd = """
 cd srclib
-svn checkout http://ptex2tex.googlecode.com/svn/trunk/ ptex2tex
+git clone git@github.com:hplgit/ptex2tex.git
 cd ptex2tex
 sudo python setup.py install
 cd latex
@@ -130,6 +135,7 @@ system('sudo apt-get -y install auctex')
 
 # Image manipulation
 system('sudo apt-get -y install imagemagick')
+system('sudo apt-get -y install inkscape')
 system('sudo apt-get -y install netpbm')
 system('sudo apt-get -y install mjpegtools')
 system('sudo apt-get -y install pdftk')
@@ -165,4 +171,4 @@ system('sudo apt-get -y install diffuse')
 # example on installing mdframed.sty manually (it exists in texlive,
 # but sometimes needs to be in its newest version)
 
-print 'Everything is successfully installed!'
+print('Everything is successfully installed!')

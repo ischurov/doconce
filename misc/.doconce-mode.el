@@ -7,7 +7,7 @@
 
 
 ;; Key bindings, see http://ergoemacs.org/emacs/keyboard_shortcuts.html
-(add-hook 'doconce-hook
+(add-hook 'DocOnce-hook
  (lambda ()
  (local-set-key (kbd "\C-chelp") "
 |--------------------------------------------------------|
@@ -155,7 +155,7 @@ text...
 
 (make-face 'do-comment-face)
 (set-face-attribute 'do-comment-face nil :slant 'italic)
-(set-face-attribute 'do-comment-face nil :foreground "yellow")
+(set-face-attribute 'do-comment-face nil :foreground "blue")
 
 (make-face 'do-split-face)
 (set-face-attribute 'do-split-face nil :background "red")
@@ -163,12 +163,12 @@ text...
 
 
 ;;###autoload
-(define-generic-mode doconce
+(define-generic-mode DocOnce
   '(("%<doc>" . "%</doc>"))              ; (mako) comment characters
   '("bwarning" "ewarning" "bquote" "equote" "bnotice" "enotice" "bsummary" "esummary" "bquestion" "equestion" "bblock" "eblock" "bbox" "ebox" "bsubex" "esubex" "bhint" "ehint" "bsol" "esol" "bans" "eans" "bremarks" "eremarks" "bpop" "epop" "bslidecell" "eslidecell" "idx") ; keywords (!bt used below does not work well)
   '(("\\(^!bc[^§]+?!ec\\)" (1 'do-code-face))
     ("\\(^\\(FIGURE\\|MOVIE\\|AUTHOR\\|TITLE\\):.+$\\)" (1 'do-figmov-face))
-    ("\\(^!bt[^§]+?!et\\)" (1 'do-math-face))
+    ("\\(^!bt[^§]+?!et\\)" (1 'do-code-face))
     ("\\(`.+?`\\)" (1 'do-code-face))
     ("\\(\\*.+?\\*\\)" (1 'do-emph-face))
     ("\\(\s+_.+?_\s+\\)" (1 'do-bold-face))
@@ -187,5 +187,4 @@ We have comments, keywords, a special face for dates, and recognize .hello files
 
 (defun doconce-special-setup ()
   "Some custom setup stuff done here by mode writer."
-  (message "You've just enabled the doconce mode."))
-
+  (message "You've just enabled the DocOnce mode."))

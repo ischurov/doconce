@@ -1,10 +1,15 @@
+from __future__ import absolute_import
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.builtins import basestring
 import re, os, sys
-from common import insert_code_and_tex, indent_lines, \
+from .common import insert_code_and_tex, indent_lines, \
     table_analysis, plain_exercise, bibliography, \
-    cite_with_multiple_args2multiple_cites
-from html import html_movie, html_quiz
-from doconce import _abort
-from misc import option, _abort
+    cite_with_multiple_args2multiple_cites, fix_ref_section_chapter
+from .html import html_movie, html_quiz
+from .doconce import _abort, errwarn, locale_dict
+from .misc import option, _abort
 
 def rst_abstract(m):
     # r'\n*\g<type>.* \g<text>\n\g<rest>'
@@ -94,8 +99,8 @@ def rst_movie(m):
 
     filename = m.group('filename')
     if not filename.startswith('http') and not filename.startswith('mov'):
-        print '*** warning: movie file %s' % filename
-        print '    is not in mov* subdirectory - this will give problems with sphinx'
+        errwarn('*** warning: movie file %s' % filename)
+        errwarn('    is not in mov* subdirectory - this will give problems with sphinx')
     return rst_text
 
 # these global patterns are used in st, epytext, plaintext as well:
@@ -138,7 +143,7 @@ def rst_code(filestr, code_blocks, code_block_types,
 
     if option('rst_mathjax') and (re.search(r'^!bt', filestr, flags=re.MULTILINE) or re.search(r'\\\( .+ \\\)', filestr)):
         # First add MathJax script in the very beginning of the file
-        from html import mathjax_header
+        from .html import mathjax_header
         latex = indent_lines(mathjax_header(filestr).lstrip(), 'rst')
         filestr = '\n.. raw:: html\n\n' + latex + '\n\n' + filestr
         # Replace all the !bt parts by raw html directive (make sure
@@ -172,10 +177,10 @@ def rst_code(filestr, code_blocks, code_block_types,
         c = re.compile(pattern, re.MULTILINE)
         m = c.search(filestr)
         if m:
-            print """
+            errwarn("""
 Still %s left after handling of code and tex blocks. Problem is probably
 that %s is not preceded by text which can be extended with :: (required).
-""" % (pattern, pattern)
+""" % (pattern, pattern))
             _abort()
 
     # Final fixes
@@ -290,9 +295,9 @@ def rst_author(authors_and_institutions, auth2index,
             if email:
                 text += '   :responsible-email: %s\n\n' % email
         else:
-            print '*** error: with --rst_uio there must be an AUTHOR:'
-            print '    field with (at least) one author w/email who will be'
-            print '    listed as the resposible under uio-meta::'
+            errwarn('*** error: with --rst_uio there must be an AUTHOR:')
+            errwarn('    field with (at least) one author w/email who will be')
+            errwarn('    listed as the resposible under uio-meta::')
             _abort()
     else:
         authors = []
@@ -308,25 +313,7 @@ def rst_author(authors_and_institutions, auth2index,
     return text
 
 def ref_and_label_commoncode(section_label2title, format, filestr):
-    # .... see section ref{my:sec} is replaced by
-    # see the section "...section heading..."
-    pattern = r'[Ss]ection(s?)\s+ref\{'
-    replacement = r'the section\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    pattern = r'[Cc]hapter(s?)\s+ref\{'
-    replacement = r'the chapter\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-
-    # Need special adjustment to handle start of sentence (capital) or not.
-    pattern = r'([.?!]\s+|\n\n|[%=~-]\n+)the (sections?|chapters?)\s+ref'
-    replacement = r'\g<1>The \g<2> ref'
-    filestr = re.sub(pattern, replacement, filestr)
-
-    # Remove Exercise, Project, Problem in references since those words
-    # are used in the title of the section too
-    pattern = r'(the\s*)?([Ee]xercises?|[Pp]rojects?|[Pp]roblems?)\s+ref\{'
-    replacement = r'ref{'
-    filestr = re.sub(pattern, replacement, filestr)
+    filestr = fix_ref_section_chapter(filestr, format)
 
     # Deal with the problem of identical titles, which makes problem
     # with non-unique links in reST: add a counter to the title
@@ -354,8 +341,8 @@ def ref_and_label_commoncode(section_label2title, format, filestr):
         if m:
             title = m.group(1).strip()
             if len(title) > 63:
-                print '*** error: sphinx title cannot be longer than 63 characters'
-                print '    current title: "%s" (%d characters)' % (title, len(title))
+                errwarn('*** error: sphinx title cannot be longer than 63 characters')
+                errwarn('    current title: "%s" (%d characters)' % (title, len(title)))
                 _abort()
     filestr = re.sub(pattern, '.. Document title:\n\n%s \g<1> %s\n' %
                      ('='*max_heading, '='*max_heading),
@@ -403,7 +390,7 @@ def ref_and_label_commoncode(section_label2title, format, filestr):
     filestr = cpattern.sub('', filestr)
     filestr = re.sub(r'label\{[^}]+?\}', '', filestr)  # all the remaining
 
-    import doconce
+    from . import doconce
     doconce.debugpr(debugtext)
 
     return filestr
@@ -417,7 +404,7 @@ def rst_ref_and_label(section_label2title, format, filestr):
         filestr = filestr.replace('ref{%s}' % label,
                                   '`%s`_' % section_label2title[label])
 
-    from common import ref2equations
+    from .common import ref2equations
     filestr = ref2equations(filestr)
     # replace remaining ref{x} as x_
     filestr = re.sub(r'ref\{(.+?)\}', '`\g<1>`_', filestr)
@@ -456,17 +443,17 @@ def rst_bib(filestr, citations, pubfile, pubdata, numbering=True):
                 except UnicodeDecodeError as e:
                     if "can't decode byte" in str(e):
                         try:
-                            bibtext = bibtext.decode('utf-8').replace(
-                                '[%s]' % label, cite % citations[label])
+                            bibtext = bibtext.replace('[%s]' % label, 
+                                                      cite % citations[label])
                         except UnicodeDecodeError as e:
-                            print 'UnicodeDecodeError:', e
-                            print '*** error: problems in %s' % pubfile
-                            print '    with key', label
-                            print '    tried to do decode("utf-8"), but it did not work'
+                            errwarn('UnicodeDecodeError: ' + e)
+                            errwarn('*** error: problems in %s' % pubfile)
+                            errwarn('    with key ' + label)
+                            errwarn('    tried to do decode("utf-8"), but it did not work')
                     else:
-                        print e
-                        print '*** error: problems in %s' % pubfile
-                        print '    with key', label
+                        errwarn(e)
+                        errwarn('*** error: problems in %s' % pubfile)
+                        errwarn('    with key ' + label)
                         _abort()
 
 
@@ -595,9 +582,9 @@ def rst_quiz(quiz):
         if len(choice) == 3 and quiz_expl == 'on':
             expl = choice[2]
             if '.. figure::' in expl or 'math::' in expl or '.. code-block::' in expl:
-                print '*** warning: quiz explanation contains block (fig/code/math)'
-                print '    and is therefore skipped'
-                print expl, '\n'
+                errwarn('*** warning: quiz explanation contains block (fig/code/math)')
+                errwarn('    and is therefore skipped')
+                errwarn(expl + '\n')
                 expl = ''  # drop explanation when it needs blocks
             # Should remove markup
             pattern = r'`(.+?) (<https?.+?)>`__'  # URL
@@ -671,12 +658,12 @@ def define(FILENAME_EXTENSION,
         # (note len(m.group('subst')) gives wrong length for latin-1 strings,
         # seems to work for utf-8, if problems: replace lambda function
         # with an ordinary function where you can debug and test!
-        #'chapter':       lambda m: '%s\n%s' % (m.group('subst'), '%'*len(m.group('subst').decode(encoding))),
+        #'chapter':       lambda m: '%s\n%s' % (m.group('subst'), '%'*len(m.group('subst'))),
         'chapter':       lambda m: '%s\n%s' % (m.group('subst'), '%'*len(m.group('subst'))),
         'section':       lambda m: '%s\n%s' % (m.group('subst'), '='*len(m.group('subst'))),
         'subsection':    lambda m: '%s\n%s' % (m.group('subst'), '-'*len(m.group('subst'))),
         'subsubsection': lambda m: '%s\n%s\n' % (m.group('subst'), '~'*len(m.group('subst'))),
-        'paragraph':     r'**\g<subst>**\n',  # extra newline
+        'paragraph':     r'**\g<subst>**' + '\n',  # extra newline
         'abstract':      rst_abstract,
         #'title':         r'======= \g<subst> =======\n',  # doconce top section, must be the highest section level (but no higher than others, need more code)
         'title':         None, # taken care of in ref_and_label_commoncode
@@ -726,7 +713,7 @@ def define(FILENAME_EXTENSION,
 
         'separator': '\n',
         }
-    from common import DEFAULT_ARGLIST
+    from .common import DEFAULT_ARGLIST
     ARGLIST['rst'] = DEFAULT_ARGLIST
     FIGURE_EXT['rst'] = {
         'search': ('.png', '.gif', '.jpg', '.jpeg', '.pdf', '.eps', '.ps'),
@@ -736,7 +723,7 @@ def define(FILENAME_EXTENSION,
 
     TABLE['rst'] = rst_table
     EXERCISE['rst'] = plain_exercise
-    TOC['rst'] = lambda s: '.. contents:: Table of Contents\n   :depth: 2'
+    TOC['rst'] = lambda s, f: '.. contents:: %s\n   :depth: 2' % locale_dict[locale_dict['language']].get('toc', 'Table of contents')
     QUIZ['rst'] = rst_quiz
     INTRO['rst'] = """\
 .. Automatically generated reStructuredText file from DocOnce source
@@ -744,7 +731,7 @@ def define(FILENAME_EXTENSION,
 
 """
     # http://stackoverflow.com/questions/11830242/non-breaking-space
-    from common import INLINE_TAGS
+    from .common import INLINE_TAGS
     if re.search(INLINE_TAGS['non-breaking-space'], filestr):
         nbsp = """
 .. |nbsp| unicode:: 0xA0
@@ -752,11 +739,11 @@ def define(FILENAME_EXTENSION,
 
 """
         if 'TITLE:' not in filestr:
-            import common
+            from . import common
             if common.format in ('rst', 'sphinx'):
-                print '*** error: non-breaking space character ~ is used,'
-                print '    but this will give an error when the document does'
-                print '    not have a title.'
+                errwarn('*** error: non-breaking space character ~ is used,')
+                errwarn('    but this will give an error when the document does')
+                errwarn('    not have a title.')
                 _abort()
         else:
             INTRO['rst'] += nbsp

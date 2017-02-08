@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+from __future__ import print_function
 import numpy as np
 
 def readfile(filename):
@@ -23,10 +22,9 @@ if __name__ == '__main__':
     data = readfile('mydat.txt')
     # Treat each column as a variable
     m, s, c = analyze(data.transpose())
-    print """
+    print("""
 mean=%f
 st.dev=%f
 correlation matrix:
 %s
-""" % (m, s, c)
-
+""" % (m, s, c))

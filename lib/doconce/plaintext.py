@@ -1,8 +1,11 @@
-
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
+from past.builtins import basestring
 import re, sys
-from common import default_movie, plain_exercise, bibliography, \
-     cite_with_multiple_args2multiple_cites
-from misc import option
+from .common import default_movie, plain_exercise, bibliography, \
+     cite_with_multiple_args2multiple_cites, fix_ref_section_chapter
+from .misc import option
 
 
 def plain_author(authors_and_institutions, auth2index,
@@ -19,24 +22,7 @@ def plain_author(authors_and_institutions, auth2index,
     return text
 
 def plain_ref_and_label(section_label2title, format, filestr):
-    # .... see section ref{my:sec} is replaced by
-    # see the section "...section heading..."
-    pattern = r'[Ss]ection(s?)\s+ref\{'
-    replacement = r'the section\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    pattern = r'[Cc]hapter(s?)\s+ref\{'
-    replacement = r'the chapter\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    # Need special adjustment to handle start of sentence (capital) or not.
-    pattern = r'([.?!]\s+|\n\n|[%=~-]\n+)the (sections?|chapters?)\s+ref'
-    replacement = r'\g<1>The \g<2> ref'
-    filestr = re.sub(pattern, replacement, filestr)
-
-    # Remove Exercise, Project, Problem in references since those words
-    # are used in the title of the section too
-    pattern = r'(the\s*)?([Ee]xercises?|[Pp]rojects?|[Pp]roblems?)\s+ref\{'
-    replacement = r' ref{'
-    filestr = re.sub(pattern, replacement, filestr)
+    filestr = fix_ref_section_chapter(filestr, format)
 
     # remove label{...} from output (when only label{} on a line, remove
     # the newline too, leave label in figure captions, and remove all the rest)
@@ -53,7 +39,7 @@ def plain_ref_and_label(section_label2title, format, filestr):
         filestr = filestr.replace('ref{%s}' % label,
                                   '"%s"' % section_label2title[label])
 
-    from common import ref2equations
+    from .common import ref2equations
     filestr = ref2equations(filestr)
 
     return filestr
@@ -82,7 +68,7 @@ def plain_index_bib(filestr, index, citations, pubfile, pubdata):
 
     return filestr
 
-def plain_toc(sections):
+def plain_toc(sections, filestr):
     # Find minimum section level
     tp_min = 4
     for title, tp, label in sections:
@@ -233,9 +219,9 @@ def define(FILENAME_EXTENSION,
         'ampersand2':    r' \g<1>&\g<2>',
         }
 
-    from rst import rst_code
+    from .rst import rst_code
     CODE['plain'] = rst_code
-    from common import DEFAULT_ARGLIST
+    from .common import DEFAULT_ARGLIST
     ARGLIST['plain'] = DEFAULT_ARGLIST
     LIST['plain'] = {
         'itemize':
@@ -250,14 +236,14 @@ def define(FILENAME_EXTENSION,
         'separator': '\n',
         }
     CROSS_REFS['plain'] = plain_ref_and_label
-    from rst import rst_table
+    from .rst import rst_table
     TABLE['plain'] = rst_table
     #TABLE['plain'] = plain_table
     EXERCISE['plain'] = plain_exercise
     INDEX_BIB['plain'] = plain_index_bib
     TOC['plain'] = plain_toc
 
-    from common import indent_lines
+    from .common import indent_lines
     ENVIRS['plain'] = {
         'warning':   lambda block, format, title='Warning', text_size='normal':
            plain_box(block, title),

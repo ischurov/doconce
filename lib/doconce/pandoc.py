@@ -2,6 +2,10 @@
 See http://johnmacfarlane.net/pandoc/README.html
 for syntax.
 """
+from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from past.builtins import basestring
 # Remaining key issue: github_md dialect hardcodes all the newlines so
 # lines in paragraphs should be joined if the resulting Markdown text
 # is published as an issue on github.com. (Difficult to solve. Current
@@ -9,10 +13,11 @@ for syntax.
 # documents and issues.)
 
 import re, sys, functools
-from common import default_movie, plain_exercise, table_analysis, \
-     insert_code_and_tex, bibliography, indent_lines
-from html import html_movie, html_table
-from misc import option
+from .common import default_movie, plain_exercise, table_analysis, \
+     insert_code_and_tex, bibliography, indent_lines, fix_ref_section_chapter
+from .html import html_movie, html_table
+from .misc import option
+from .doconce import errwarn
 
 # Mapping of envirs to correct Pandoc verbatim environment
 language2pandoc = dict(
@@ -143,9 +148,9 @@ def pandoc_code(filestr, code_blocks, code_block_types,
             envir = m.group(1)
             if envir not in ('equation', 'equation*', 'align*', 'align',
                              'array'):
-                print """\
+                errwarn("""\
 *** warning: latex envir \\begin{%s} does not work well.
-""" % envir
+""" % envir)
         # Add $$ on each side of the equation
         tex_blocks[i] = '$$\n' + tex_blocks[i] + '$$\n'
     # Note: HTML output from pandoc requires $$ while latex cannot have
@@ -292,29 +297,10 @@ def pandoc_figure(m):
     text += '![%s](%s)' % (caption, filename)
     # regex for turning the figure spec into raw html:
     # re.sub(r'^<!-- (<img.+?>.*) -->\n!\[.+$', r'\g<1>', text, flags=re.MULTILINE)
-    #print 'pandoc_figure:', text
     return text
 
 def pandoc_ref_and_label(section_label2title, format, filestr):
-    # .... see section ref{my:sec} is replaced by
-    # see the section "...section heading..."
-    pattern = r'[Ss]ection(s?)\s+ref\{'
-    replacement = r'the section\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    pattern = r'[Cc]hapter(s?)\s+ref\{'
-    replacement = r'the chapter\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-
-    # Need special adjustment to handle start of sentence (capital) or not.
-    pattern = r'([.?!]\s+|\n\n|^#+ .+?\n+)the (sections?|chapters?)\s+ref'
-    replacement = r'\g<1>The \g<2> ref'
-    filestr = re.sub(pattern, replacement, filestr, flags=re.MULTILINE)
-
-    # Remove Exercise, Project, Problem in references since those words
-    # are used in the title of the section too
-    pattern = r'(the\s*)?([Ee]xercises?|[Pp]rojects?|[Pp]roblems?)\s+ref\{'
-    replacement = r' ref{'
-    filestr = re.sub(pattern, replacement, filestr)
+    filestr = fix_ref_section_chapter(filestr, format)
 
     # Replace all references to sections. Pandoc needs a coding of
     # the section header as link. (Not using this anymore.)
@@ -347,6 +333,9 @@ def pandoc_ref_and_label(section_label2title, format, filestr):
     # right link text. html.py has probably most solutions.
     filestr = re.sub(r'([Ff]igure|[Mm]ovie)\s+ref\{(.+?)\}', '[\g<1>](#\g<2>)',
                      filestr)
+    # Remaining ref{} (should protect \eqref)
+    filestr = re.sub(r'ref\{(.+?)\}', '[\g<1>](#\g<1>)', filestr)
+    #filestr = re.sub(r'([^q])ref\{(.+?)\}', '\g<1>[\g<2>](#\g<2>)', filestr)
     return filestr
 
 
@@ -502,7 +491,7 @@ def define(FILENAME_EXTENSION,
             'box':      slate_success,
             }
 
-    from common import DEFAULT_ARGLIST
+    from .common import DEFAULT_ARGLIST
     ARGLIST['pandoc'] = DEFAULT_ARGLIST
     LIST['pandoc'] = {
         'itemize':
@@ -522,7 +511,7 @@ def define(FILENAME_EXTENSION,
     TABLE['pandoc'] = pandoc_table
     INDEX_BIB['pandoc'] = pandoc_index_bib
     EXERCISE['pandoc'] = plain_exercise
-    TOC['pandoc'] = lambda s: '# Table of contents: Run pandoc with --toc option'
+    TOC['pandoc'] = lambda s, f: '# Table of contents: Run pandoc with --toc option'
     QUIZ['pandoc'] = pandoc_quiz
     FIGURE_EXT['pandoc'] = {
         'search': ('.png', '.gif', '.jpg', '.jpeg', '.tif', '.tiff', '.pdf'),

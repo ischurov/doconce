@@ -4,7 +4,9 @@ DATE: today
 
 ======= Data file =======
 
-Suppose we have some data in a file typeset with `!bc dat`:
+Suppose we have some data in a file. The final
+result of including this file with `@@@CODE mydat.txt` (which implies
+a code environment starting with `!bc dat`) looks like this:
 
 @@@CODE mydat.txt envir=dat
 
@@ -34,11 +36,17 @@ correlation matrix:
 
 ======= Code snippet =======
 
-Fortran 77 is also sometimes handy (typeset with `!bc fcod`):
+Fortran 77 is also sometimes handy. Snippets in that language are
+typeset inside `!bc fcod` environments.
+
+!bnotice Fortran code box
+!bt
+\[ r_i = ca_i,\quad i=1,\ldots,n\]
+!et
 
 !bc fcod
        subroutine process(a, n, c, r)
-C      Return array r = c*a
+C      This subroutine returns array r = c*a
        integer n
        real*8 a(n), c, r(n)
        integer i
@@ -48,3 +56,4 @@ C      Return array r = c*a
        return
        end
 !ec
+!enotice

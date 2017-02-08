@@ -1,10 +1,14 @@
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 import re, sys, shutil, os
-from common import default_movie, plain_exercise, table_analysis, \
+from .common import default_movie, plain_exercise, table_analysis, \
      insert_code_and_tex, indent_lines
-from html import html_movie, html_table
-from pandoc import pandoc_ref_and_label, pandoc_index_bib, pandoc_quote, \
+from .html import html_movie, html_table
+from .pandoc import pandoc_ref_and_label, pandoc_index_bib, pandoc_quote, \
      language2pandoc, pandoc_quiz
-from misc import option, _abort
+from .misc import option, _abort
+from .doconce import errwarn
 
 # Global variables
 figure_encountered = False
@@ -30,6 +34,7 @@ def ipynb_author(authors_and_institutions, auth2index,
     # New code: typeset as lines, but insert a comment so we
     # can convert back <!-- dom:AUTHOR: ... ->
     s = '\n'
+    first_pass = True
     for author, i, e in authors_and_institutions:
         s+= '<!-- dom:AUTHOR: ' + author
         if e is not None:
@@ -37,12 +42,17 @@ def ipynb_author(authors_and_institutions, auth2index,
         if i is not None:
             s += ' at ' + ' & '.join(i)
         s += ' -->\n'
-        s+= '<!-- Author: --> _%s_' % (author)
+        # Add extra line between heading and first author
+        if first_pass:
+            s+= '<!-- Author: -->  \n_%s_' % (author)
+        else:
+            s+= '<!-- Author: --> _%s_' % (author)
         if e is not None:
             s += ' (email: `%s`)' % e
         if i is not None:
             s += ', ' + ' and '.join(i)
-        s += '\n\n'
+        first_pass = False
+        s += '  \n'
     return s
 
 def ipynb_table(table):
@@ -92,7 +102,7 @@ def ipynb_figure(m):
             #text += '<a name="%s"></a>' % label
             text += '<div id="%s"></div>\n' % label
         # Fix caption markup so it becomes html
-        from doconce import INLINE_TAGS_SUBST, INLINE_TAGS
+        from .doconce import INLINE_TAGS_SUBST, INLINE_TAGS
         for tag in 'bold', 'emphasize', 'verbatim':
             caption = re.sub(INLINE_TAGS[tag], INLINE_TAGS_SUBST['html'][tag],
                              caption, flags=re.MULTILINE)
@@ -127,7 +137,7 @@ def ipynb_figure(m):
         text += 'Image(%s="%s")\n' % (keyword, filename)
         text += '!ec\n'
     else:
-        print '*** error: --ipynb_figure=%s is illegal, must be md, imgtag or Image' % display_method
+        errwarn('*** error: --ipynb_figure=%s is illegal, must be md, imgtag or Image' % display_method)
         _abort()
     text += '<!-- end figure -->\n'
     return text
@@ -144,7 +154,7 @@ def ipynb_movie(m):
     if 'youtu.be' in filename or 'youtube.com' in filename:
         youtube = True
     if '*' in filename or '->' in filename:
-        print '*** warning: * or -> in movie filenames is not supported in ipynb'
+        errwarn('*** warning: * or -> in movie filenames is not supported in ipynb')
         return text
 
     def YouTubeVideo(filename):
@@ -154,7 +164,7 @@ def ipynb_movie(m):
         elif 'youtu.be/' in filename:
             name = filename.split('youtu.be/')[1]
         else:
-            print '*** error: youtube movie name "%s" could not be interpreted' % filename
+            errwarn('*** error: youtube movie name "%s" could not be interpreted' % filename)
             _abort()
 
         text = ''
@@ -198,8 +208,8 @@ def ipynb_movie(m):
             # Just support .mp4, .ogg, and.webm
             stem, ext = os.path.splitext(filename)
             if ext not in ('.mp4', '.ogg', '.webm'):
-                print '*** error: movie "%s" in format %s is not supported for --ipynb_movie=%s' % (filename, ext, display_method)
-                print '    use --ipynb_movie=HTML instead'
+                errwarn('*** error: movie "%s" in format %s is not supported for --ipynb_movie=%s' % (filename, ext, display_method))
+                errwarn('    use --ipynb_movie=HTML instead')
                 _abort()
             height = 365
             width = 640
@@ -223,7 +233,7 @@ video_tag = '<video controls loop alt="%s" height="%s" width="%s" src="data:vide
                 text += '\nprint "%s"' % caption
         text += '!ec\n'
     else:
-        print '*** error: --ipynb_movie=%s is not supported' % display_method
+        errwarn('*** error: --ipynb_movie=%s is not supported' % display_method)
         _abort()
     text += '<!-- end movie -->\n'
     return text
@@ -242,7 +252,7 @@ def ipynb_code(filestr, code_blocks, code_block_types,
 
     # filestr becomes json list after this function so we must typeset
     # envirs here. All envirs are typeset as pandoc_quote.
-    from common import _CODE_BLOCK, _MATH_BLOCK
+    from .common import _CODE_BLOCK, _MATH_BLOCK
     envir_format = option('ipynb_admon=', 'paragraph')
     # Remove all !bpop-!epop environments (they cause only problens and
     # have no use)
@@ -254,7 +264,7 @@ def ipynb_code(filestr, code_blocks, code_block_types,
     filestr = re.sub('^<!-- !bnotes.*?<!-- !enotes -->\n', '', filestr,
                      flags=re.DOTALL|re.MULTILINE)
     filestr = re.sub('^<!-- !split -->\n', '', filestr, flags=re.MULTILINE)
-    from doconce import doconce_envirs
+    from .doconce import doconce_envirs
     envirs = doconce_envirs()[8:-2]
     for envir in envirs:
         pattern = r'^!b%s(.*?)\n(.+?)\s*^!e%s' % (envir, envir)
@@ -315,7 +325,7 @@ def ipynb_code(filestr, code_blocks, code_block_types,
                     text = title + block + '\n\n'
                 return text
         else:
-            print '*** error: --ipynb_admon=%s is not supported'  % envir_format
+            errwarn('*** error: --ipynb_admon=%s is not supported'  % envir_format)
         filestr = re.sub(pattern, subst, filestr,
                          flags=re.DOTALL | re.MULTILINE)
 
@@ -325,10 +335,9 @@ def ipynb_code(filestr, code_blocks, code_block_types,
     # Insert %matplotlib inline in the first block using matplotlib
     # Only typeset Python code as blocks, otherwise !bc environmens
     # become plain indented Markdown.
-    from doconce import dofile_basename
-    from sets import Set
+    from .doconce import dofile_basename
     ipynb_tarfile = 'ipynb-%s-src.tar.gz' % dofile_basename
-    src_paths = Set()
+    src_paths = set()
     mpl_inline = False
 
     split_pyshell = option('ipynb_split_pyshell=', 'on')
@@ -429,6 +438,8 @@ def ipynb_code(filestr, code_blocks, code_block_types,
                 ipynb_code_tp[i] = 'markdown'
         elif tp.endswith('hid'):
             ipynb_code_tp[i] = 'cell_hidden'
+        elif tp.endswith('out'):
+            ipynb_code_tp[i] = 'cell_output'
         elif tp.startswith('py'):
             ipynb_code_tp[i] = 'cell'
         else:
@@ -448,7 +459,7 @@ def ipynb_code(filestr, code_blocks, code_block_types,
         # Make tar file with all the source dirs with files
         # that need to be executed
         os.system('tar cfz %s %s' % (ipynb_tarfile, ' '.join(src_paths)))
-        print 'collected all required additional files in', ipynb_tarfile, 'which must be distributed with the notebook'
+        errwarn('collected all required additional files in ' + ipynb_tarfile + ' which must be distributed with the notebook')
     elif os.path.isfile(ipynb_tarfile):
         os.remove(ipynb_tarfile)
 
@@ -488,6 +499,8 @@ def ipynb_code(filestr, code_blocks, code_block_types,
                 notebook_blocks[i] = ['cell', notebook_blocks[i]]
             elif ipynb_code_tp[idx] == 'cell_hidden':
                 notebook_blocks[i] = ['cell_hidden', notebook_blocks[i]]
+            elif ipynb_code_tp[idx] == 'cell_output':
+                notebook_blocks[i] = ['cell_output', notebook_blocks[i]]
             else:
                 notebook_blocks[i] = ['text', notebook_blocks[i]]
         elif re.match(pattern % _MATH_BLOCK, notebook_blocks[i]):
@@ -521,11 +534,11 @@ def ipynb_code(filestr, code_blocks, code_block_types,
             envir = m.group(1)
             if envir not in ('equation', 'equation*', 'align*', 'align',
                              'array'):
-                print """\
+                errwarn("""\
 *** warning: latex envir \\begin{%s} does not work well in Markdown.
     Stick to \\[ ... \\], equation, equation*, align, or align*
     environments in math environments.
-""" % envir
+""" % envir)
         eq_type = 'heading'  # or '$$'
         eq_type = '$$'
         # Markdown: add $$ on each side of the equation
@@ -569,22 +582,28 @@ def ipynb_code(filestr, code_blocks, code_block_types,
                 new_notebook, new_metadata, new_author)
             nb = new_worksheet()
         except ImportError:
-            print '*** error: could not import IPython.nbformat.v3!'
-            print '    set --ipynb_version=4 or leave out --ipynb_version=3'
+            errwarn('*** error: could not import IPython.nbformat.v3!')
+            errwarn('    set --ipynb_version=4 or leave out --ipynb_version=3')
             _abort()
     elif nb_version == 4:
-        from IPython.nbformat.v4 import (
-            new_code_cell, new_markdown_cell, new_notebook)
+        try:
+            from nbformat.v4 import (
+                new_code_cell, new_markdown_cell, new_notebook)
+        except ImportError:
+            # Try old style
+            try:
+                from IPython.nbformat.v4 import (
+                    new_code_cell, new_markdown_cell, new_notebook)
+            except ImportError:
+                errwarn('*** error: cannot do import nbformat.v4 or IPython.nbformat.v4')
+                errwarn('    make sure IPython notebook or Jupyter is installed correctly')
+                _abort()
         cells = []
 
     mdstr = []  # plain md format of the notebook
     prompt_number = 1
     for block_tp, block in notebook_blocks:
-        if (block_tp == 'text' or block_tp == 'math') and block != '':
-            # Pure comments between math/code and math/code come
-            # out as empty blocks, should detect that situation
-            # (challenging - can have multiple lines of comments,
-            # or begin and end comment lines with important things between)
+        if (block_tp == 'text' or block_tp == 'math') and block != '' and block != '<!--  -->':
             if nb_version == 3:
                 nb.cells.append(new_text_cell(u'markdown', source=block))
             elif nb_version == 4:
@@ -621,6 +640,36 @@ def ipynb_code(filestr, code_blocks, code_block_types,
                             execution_count=prompt_number,
                             metadata=dict(collapsed=False)))
                     prompt_number += 1
+                    mdstr.append(('codecell', block))
+        elif block_tp == 'cell_output' and block != '':
+            block = block.rstrip()
+            if nb_version == 3:
+                print("WARNING: Output not implemented for nbformat v3.")
+            elif nb_version == 4:
+                outputs = [
+                    {
+                        "data": {
+                            "text/plain": [
+                                block
+                            ]
+                        },
+                        "execution_count": prompt_number-1,
+                        "metadata": {},
+                        "output_type": "execute_result"
+                    }
+                ]
+                previous_cell = cells[-1]
+                if previous_cell.cell_type == "code":
+                    previous_cell.outputs = outputs
+                else:
+                    print("WARNING: DocOnce ipynb got code output,",
+                          "but previous was not code.")
+                    cells.append(new_code_cell(
+                        source="#",
+                        outputs=outputs,
+                        execution_count=prompt_number,
+                        metadata=dict(collapsed=False)
+                    ))
                     mdstr.append(('codecell', block))
         elif block_tp == 'cell_hidden' and block != '':
             block = block.rstrip()
@@ -673,7 +722,7 @@ def ipynb_code(filestr, code_blocks, code_block_types,
 
     # Check that there are no empty cells:
     if '"input": []' in filestr:
-        print '*** error: empty cells in notebook - report bug in DocOnce'
+        errwarn('*** error: empty cells in notebook - report bug in DocOnce')
         _abort()
     # must do the replacements here at the very end when json is written out
     # \eqref and labels will not work, but labels (only in math) do no harm
@@ -688,7 +737,7 @@ def ipynb_code(filestr, code_blocks, code_block_types,
         try:
             return r'[(%s)](#%s)' % (label2tag[label], label)
         except KeyError as e:
-            print '*** error: label "%s" is not defined' % str(e)
+            errwarn('*** error: label "%s" is not defined' % str(e))
 
     filestr = re.sub(r'\(ref\{(.+?)\}\)', subst, filestr)
     """
@@ -740,7 +789,7 @@ def ipynb_index_bib(filestr, index, citations, pubfile, pubdata):
     # Quite some code here is copy from latex_index_bib
     # http://nbviewer.ipython.org/github/ipython/nbconvert-examples/blob/master/citations/Tutorial.ipynb
     if citations:
-        from common import cite_with_multiple_args2multiple_cites
+        from .common import cite_with_multiple_args2multiple_cites
         filestr = cite_with_multiple_args2multiple_cites(filestr)
     for label in citations:
         filestr = filestr.replace('cite{%s}' % label,
@@ -750,7 +799,7 @@ def ipynb_index_bib(filestr, index, citations, pubfile, pubdata):
     if pubfile is not None:
         # Always produce a new bibtex file
         bibtexfile = pubfile[:-3] + 'bib'
-        print '\nexporting publish database %s to %s:' % (pubfile, bibtexfile)
+        errwarn('\nexporting publish database %s to %s:' % (pubfile, bibtexfile))
         publish_cmd = 'publish export %s' % os.path.basename(bibtexfile)
         # Note: we have to run publish in the directory where pubfile resides
         this_dir = os.getcwd()
@@ -762,7 +811,7 @@ def ipynb_index_bib(filestr, index, citations, pubfile, pubdata):
         os.chdir(this_dir)
 
         bibstyle = option('latex_bibstyle=', 'plain')
-        from latex import fix_latex_command_regex
+        from .latex import fix_latex_command_regex
         bibtext = fix_latex_command_regex(r"""
 ((*- extends 'latex_article.tplx' -*))
 
@@ -841,7 +890,7 @@ def define(FILENAME_EXTENSION,
     # treatment of envirs in ipynb_code and ENVIRS can be empty.
     ENVIRS['ipynb'] = {}
 
-    from common import DEFAULT_ARGLIST
+    from .common import DEFAULT_ARGLIST
     ARGLIST['ipynb'] = DEFAULT_ARGLIST
     LIST['ipynb'] = {
         'itemize':
@@ -864,8 +913,8 @@ def define(FILENAME_EXTENSION,
     else:
         INDEX_BIB['ipynb'] = pandoc_index_bib
     EXERCISE['ipynb'] = plain_exercise
-    TOC['ipynb'] = lambda s: ''
+    TOC['ipynb'] = lambda s, f: ''
     FIGURE_EXT['ipynb'] = {
-        'search': ('.png', '.gif', '.jpg', '.jpeg', '.tif', '.tiff', '.pdf'),
+        'search': ('.png', '.gif', '.jpg', '.jpeg', '.tif', '.tiff'),
         'convert': ('.png', '.gif', '.jpg')}
     QUIZ['ipynb'] = pandoc_quiz

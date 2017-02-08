@@ -1,5 +1,9 @@
 # -*- coding: iso-8859-15 -*-
-from latex import *
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from .latex import *
+from .doconce import errwarn
 
 def pdflatex_emoji(m):
     space1 = m.group(1)
@@ -10,14 +14,14 @@ def pdflatex_emoji(m):
     emojifile = os.path.join(latexfigdir, name + '.png')
     if not os.path.isfile(emojifile):
         # Download emoji image
-        from common import emoji_url
+        from .common import emoji_url
         url = emoji_url + name + '.png'
-        import urllib
-        urllib.urlretrieve(url, filename=emojifile)
+        import urllib.request, urllib.parse, urllib.error
+        urllib.request.urlretrieve(url, filename=emojifile)
         # Check that this was successful
         with open(emojifile, 'r') as f:
             if 'Not Found' in f.read():
-                print '*** error: emoji "name" is probably misspelled - cannot find any emoji with that name'
+                errwarn('*** error: emoji "name" is probably misspelled - cannot find any emoji with that name')
                 _abort()
     s = space1 + r'\raisebox{-\height+\ht\strutbox}{\includegraphics[height=1.5em]{%s}}' % emojifile + space2
     # NOTE: \ht needs the calc package!
@@ -43,7 +47,7 @@ def define(FILENAME_EXTENSION,
 
     if not 'latex' in BLANKLINE:
         # latex.define is not yet ran on these dictionaries, do it:
-        import latex
+        from . import latex
         latex.define(FILENAME_EXTENSION,
                      BLANKLINE,
                      INLINE_TAGS_SUBST,
@@ -64,7 +68,7 @@ def define(FILENAME_EXTENSION,
 
     # The big difference between pdflatex and latex is the image formats
     FIGURE_EXT['pdflatex'] = {
-        'search': ('.pgf', '.pdf', '.png', '.jpg', '.jpeg'),
+        'search': ('.pgf', '.tikz', '.pdf', '.png', '.jpg', '.jpeg'),
         'convert': ('.pdf', '.png', '.jpg')}
 
     # The rest is copy
@@ -79,7 +83,7 @@ def define(FILENAME_EXTENSION,
     EXERCISE['pdflatex'] = EXERCISE['latex']
     INTRO['pdflatex'] = INTRO['latex'].replace('.eps', '.pdf').replace('epsfig,', '')
     latex_style = option('latex_style=', 'std')
-    if latex_style not in ('Springer_T2',):
+    if latex_style not in ('Springer_T2', 'Springer_T4') and not option('xelatex'):
         INTRO['pdflatex'] = INTRO['pdflatex'].replace(
             'usepackage{graphicx}', 'usepackage[pdftex]{graphicx}')
     OUTRO['pdflatex'] = OUTRO['latex']

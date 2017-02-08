@@ -151,6 +151,37 @@ inserts checks for successful runs of the many `doconce` commands,
 and if something goes wrong, the script aborts.
 
 
+===== Spell checking =====
+label{do2any:spellcheck}
+
+Despite not being a part of compiling DocOnce to some format, spell checking
+is often the first task done in a `make.sh` or `make.py` file. DocOnce
+comes with a convenient support for spell checking, `doconce spellcheck`, where
+all code and mathematics are stripped from the document, as well as all inline
+verbatim expressions, comments, etc. Then the program `ispell` is run on
+the stripped document, and a list of misspellings is reported.
+
+Any DocOnce document has its own set of ``legal words'' (approved by the
+authors) in the file `.dict4spell.txt`. When `doconce spellcheck` reports
+new misspellings, some are corrected and some are added to `.dict4spell.txt`.
+The spell checker applies an American dictionary and the user's custom
+dictionary in `.dict4spell.txt`.
+
+The work flow is simple:
+
+  o Run `doconce spellcheck -d .dict4spell.txt *.do.txt`
+  o Examine `misspellings.txt~` for misspellings and make corrections in
+    the source files.
+  o Rerun `doconce spellcheck` and repeat the procedure.
+  o When all words in `misspellings.txt~` are acceptable, add these to
+    the current custom dictionary by `cp new_dictionary.txt~ .dict4spell.txt`.
+
+Run `doconce spellcheck` without any arguments to get more description of
+what kind of files that are produced. For example, the text in `mydoc.do.txt`,
+stripped for math, code, and other special constructions, is available
+in `tmp_stripped_mydoc.do.txt` and can be copied into (e.g.) Microsoft Word
+for grammar check.
+
 ===== Preprocessing =====
 label{do2any:pre}
 
@@ -205,6 +236,10 @@ the result of running `mako` is available in
 `tmp_mako__mydoc.do.txt`. By examining these files one can see exactly
 what the preprocessors have done.
 
+The command-line arguments `--no_preprocess` and `--no_mako` turn off
+running `preprocess` and `mako`, respectively.
+
+
 === Variable Substition with Preprocessors ===
 
 A variable `VAR=value` given on the command line (or `-DVar=value`) can
@@ -225,10 +260,9 @@ label{do2any:inlinecomments}
 
 idx{inline comments}
 
-The command-line arguments `--no_preprocess` and `--no_mako` turn off
-running `preprocess` and `mako`, respectively.
+Inline comments (inside square brackets)
+in the text are removed from the output by
 
-Inline comments in the text are removed from the output by
 !bc sys
 Terminal> doconce format latex mydoc --skip_inline_comments
 !ec
@@ -311,9 +345,15 @@ Other useful options are
    (e.g., sections become subsections or chapters).
  * `--tables2csv` translates each table to a CSV file.
  * `--short_title=X` sets a short title `X` for the document.
+ * `--toc_depth=X`: controls the depth of the table of contents
+   in documents. Default value of `X` is 3, meaning chapters,
+   sections, and subsections. `X` as 0 gives the table of contents as a
+   nested list in Bootstrap styles.
 
 Many more options, depending on the output format, are listed in the
-following sections.
+following sections. A list of all options is otbained by running
+`doconce format --help` (or preferably
+`doconce format --help | less` since the output is extensive).
 
 ======= HTML =======
 label{do2any:html}
@@ -453,9 +493,9 @@ the DocOnce file (i.e., the DocOnce source is in `basename.do.txt`).
 
 An HTML version of a DocOnce document is often made in different styles,
 calling for a need to rename the HTML output file. This is conveniently
-done by the `--html_output=basename` option, where `basename` is the
+done by the `--html_output=mydoc` option, where `mydoc` is the
 filestem of the associated HTML files. The
-`.basename_html_file_collection` file lists all the needed files
+`.mydoc_html_file_collection` file lists all the needed files
 for the HTML document. Here is an example on making three versions of
 the HTML document: `mydoc_bloodish.html`, `mydoc_solarized`, and
 `mydoc_vagrant`.
@@ -490,7 +530,9 @@ The type of URL is set with the `--html_raw_github_url=...` option:
 
 ===== Other HTML options =====
 
-Options for Bootstrap styles:
+The Bootstrap family of styles have become very popular since they
+provide responsive pages for phones and small tablets.
+There are several specific options for Bootstrap styles:
 
  * `--html_code_style=on,off,inherit,transparent`: control the style of
    inline verbatim code `code` tags. With `off`, `inherit`, or `transparent`
@@ -510,7 +552,7 @@ Options for Bootstrap styles:
    and govern the size of the document title. Default is `on`, while
    `h2` means a jumbotron with `h2` (section) size of the title
    (normally the jumbotron has huge heading fonts so some jumbotrons
-    look better with `h2` typesetting of the document title).
+   look better with `h2` typesetting of the document title).
  * `--html_quiz_button_text=X`: set a text on the answer button for
    Bootstrap-style quizzes. Without this option a small icon is used.
 
@@ -523,10 +565,6 @@ Other options:
    by comma and valid names are `email`, `facebook`, `google+`,
    `linkedin`, `twitter`, and `print`. The URL `http://...` must be
    the URL where the document is published.
- * `--toc_depth=X`: controls the depth of the table of contents
-   in documents. Default value of `X` is 3, meaning chapters,
-   sections, and subsections. `X` as 0 gives the table of contents as a
-   nested list in Bootstrap styles.
  * `--html_toc_indent=X`: indent sections/subsections `X` spaces in the table
    of contents.
  * `--html_body_font=`: specify font for text body. The value `?` lists
@@ -641,6 +679,27 @@ and produce very nice-looking books.  There is support for LaTeX
 mathematics as in WordPress blog posts, meaning that one cannot refer
 to equations.
 
+# #ifdef SAVE_AS_COMMENT
+===== How to view HTML file bundles on iPad =====
+
+PDF files from LaTeX are very easy to transfer to an iPad via a cloud
+service like Dropbox and apps like
+GoodReader or GoodNotes. HTML files can be viewed through a browser,
+but if you want a large HTML document to be viewed offline on
+an iPad you can to that by the following steps.
+
+ o Pack all files necessary for viewing the HTML document in a tarball.
+   Usually, this will be a command like `tar cvzf tmp.tar.gz mydoc.html ._mydoc*.html fig mov` (where `fig` and `mov` are figure and movie directories needed by the `.html` files).
+ o Use the iZip Pro app to download the `tmp.tar.gz` file from a service
+   like Dropbox.
+ o Click on *Files - Dropbox - tmp.tar.gz*, unpack files and follow
+   links to the directory containing the file bundle. Click on the
+   main file, `mydoc.html` and it opens locally in a browser-like app.
+ o No, _LINKS DO NOT WORK!_
+
+# #endif
+
+[[[
 
 ======= Pandoc and Markdown =======
 label{do2any:pandoc}
@@ -851,7 +910,14 @@ using the `ptex2tex` program.
 
 Direct translation is specified by the `--latex_code_style=` command-line
 option. A separate document, "Demonstration of DocOnce support for LaTeX code block environments": "http://hplgit.github.io/doconce/doc/pub/latexcode/demo.html", describes how this option is used and the demonstrates
-many possibilities that are available.
+many possibilities that are available. One popular choice is
+
+!bc
+default:lst[style=blue1_bluegreen]@dat:lst[style=gray]@sys:vrb
+!ec
+This value gives syntax-highlighted blue-green code on a blue
+background and sets data files with gray background.
+
 The `--latex_code_style=` option makes the use of `ptex2tex` or
 `doconce ptex2tex` redundant.
 
@@ -953,7 +1019,7 @@ idx{LaTeX style options}
 There are many additional options (run `doconce format --help` and
 look for options starting with `--latex` to get a more verbose description):
 
- * `--latex_code_style=lst,vrb,pyg`
+ * `--latex_code_style=lst,vrb,pyg,any`
  * `--latex_font=helvetica,palatino`
  * `--latex_papersize=a4,a6`
  * `--latex_bibstyle=plain` (name of BibTeX style)
@@ -964,7 +1030,7 @@ look for options starting with `--latex` to get a more verbose description):
  * `--latex_copyright=everypage,titlepages` (copyright on every page or on titlepage and chapter pages)
  * `--latex_list_of_exercises=loe,toc,none` (LaTeX list of exercises, integrated into the table of contents, or no list)
  * `--latex_fancy_header` (chapter/section headings at top of pages, style depends on value of `--latex_section_headings`)
- * `--latex_section_headings=std,blue,strongblue,gray,gray-wide` (standard LaTeX, blue headings, strong blue headings, white in gray box, white in gray box that fills the page width)
+ * `--latex_section_headings=std,blue,bookblue,strongblue,gray,gray-wide` (standard LaTeX, blue headings, blue headings for books, strong blue headings, white in gray box, white in gray box that fills the page width)
  * `--latex_table_format=quote, center, footnotesize, tiny` (environment around tables)
  * `--latex_colored_table_rows=blue, gray, no` (color of every two lines in tables)
  * `--latex_table_row_sep=1.5` (increase the separation between table (and matrix) rows by a factor 1.5)
@@ -1022,6 +1088,7 @@ for verbatim type setting:
  * `vrb` for plain `Verbatim` style (`fancyvrb` LaTeX package)
  * `pyg` for the Pygments style (`mintex` LaTeX package)
  * `lst` for the Listings styles (`listingsutf8` LaTeX package)
+ * `any` for any environment named `any` from any package
 
 A separate "demo":
 "http://hplgit.github.io/doconce/doc/pub/latexcode/demo.html" explains
@@ -1224,9 +1291,11 @@ idx{output format!ePub}
 
 PDF (as generated from LaTeX above) can be read on most devices today.
 However, for Kindle and other devices specialized for e-books you
-need to convert to their format. The "Calibre": "http://calibre-ebook.com/"
+need to convert to ePub or MOBI. The "Calibre": "http://calibre-ebook.com/"
 program can produce epub, mobi, and other e-book formats from PDF,
-see a "description": "http://www.dedoimedo.com/computers/latex-lyx-e-books.html".
+see a "description": "http://www.dedoimedo.com/computers/latex-lyx-e-books.html". Unfortunately, Calibre cannot deal satisfactory with LaTeX math so
+the usefulness for DocOnce writers is limited.
+See Section ref{mathtext} for more information on how to generate ePub.
 
 ===== Microsoft Word or LibreOffice =====
 label{do2any:MS:ooffice}

@@ -1,6 +1,12 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
 import os, sys
-from commands import getstatusoutput
+from subprocess import getstatusoutput
 from doconce.misc import system, misc_option, load_preprocessed_doconce_file
 from doconce.misc import (
     insertdocstr,
@@ -88,13 +94,14 @@ def format():
             doconce_lib = os.path.join(thisdir, os.pardir, 'lib', 'doconce')
             sys.path.insert(0, doconce_lib)
             import doconce.doconce
-            print 'Successfull import of doconce locally'
-        except ImportError, e:
-            print e
-            print 'Could not import doconce from directory\n', os.getcwd()
+            print('Successfull import of doconce locally')
+        except ImportError as e:
+            print(e)
+            print('Could not import doconce from directory\n', os.getcwd())
             sys.exit(1)
 
-    doconce.doconce.format_driver()
+    bg_session = doconce.doconce.format_driver()
+    return bg_session
 
 
 
@@ -103,7 +110,7 @@ def format():
 # file...
 
 def _usage_sphinx_dir():
-    print """Usage: doconce sphinx_dir short-title="some short title" version=0.1 theme=themename dirname=sphinx-rootdir toc_depth=2 intersphinx  doconcefile [--runestone]
+    print("""Usage: doconce sphinx_dir short-title="some short title" version=0.1 theme=themename dirname=sphinx-rootdir toc_depth=2 intersphinx  doconcefile [--runestone]
 
 Additional command-line arguments: theme_dir=directoryname conf.py=filename logo=filename favicon=filename
 
@@ -128,8 +135,8 @@ scrolls, sphinxdoc, traditional), extra themes that can be installed
 (alabaster, bootstrap, cloud, redcloud, solarized, sphinx_rtd_theme,
 'draft', 'flat', 'modern5', 'minimal5', 'responsive'),
 or themes that come with DocOnce (ADCtheme, agni, basicstrap,
-bloodish, cbc, fenics, fenics_minimal1, fenics_minimal2, jal, pylons,
-scipy_lectures, slim-agogo, uio, vlinux-theme).
+bloodish, cbc, fenics, fenics_classic, fenics_minimal1, fenics_minimal2,
+jal, pylons, scipy_lectures, slim-agogo, uio, uio2, vlinux-theme).
 See bundled/sphinx_themes/install.txt for how to install extra
 themes.
 
@@ -163,7 +170,7 @@ The master file can be split into parts. Here is the typical code:
   python automake_sphinx.py
 
 Note that split_rst must be run prior to sphinx_dir!
-"""
+""")
 
 import time, shutil, glob, re  # used in sphinx_dir
 
@@ -224,22 +231,22 @@ def sphinx_dir():
             doconce_files.append(arg)
 
     if not doconce_files:
-        print 'must have (at least one) doconce file as argument'
-        print 'doconce sphinx_dir somefile.do.txt'
+        print('must have (at least one) doconce file as argument')
+        print('doconce sphinx_dir somefile.do.txt')
         sys.exit(1)
     try:
         import sphinx
     except ImportError:
-        print 'Unable to import sphinx. Install sphinx from sphinx.pocoo.org.'
-        print 'On Debian systems, install the \'python-sphinx\' package.'
+        print('Unable to import sphinx. Install sphinx from sphinx.pocoo.org.')
+        print('On Debian systems, install the \'python-sphinx\' package.')
         sys.exit(1)
     if float(sphinx.__version__[:3]) < 1.1:
-        print 'Abort: sphinx version >= 1.1 required'
+        print('Abort: sphinx version >= 1.1 required')
         sys.exit(1)
 
     if len(doconce_files) > 1:
-        print 'can only specify one main doconce file'
-        print '(here you have specified %s)' % ', '.join(doconce_files)
+        print('can only specify one main doconce file')
+        print('(here you have specified %s)' % ', '.join(doconce_files))
         sys.exit(1)
 
     filename = doconce_files[0]
@@ -247,7 +254,7 @@ def sphinx_dir():
         filename = filename[:-7]
     else:
         if not os.path.isfile(filename + '.do.txt'):
-            print '%s.do.txt does not exist' % filename
+            print('%s.do.txt does not exist' % filename)
             sys.exit(1)
 
     parts = glob.glob('._%s[0-9][0-9][0-9].rst' % filename)
@@ -261,7 +268,7 @@ def sphinx_dir():
                 title = line[6:].strip()
                 break # use the first TITLE spec
         if title_cml is not None:
-            print '*** error: cannot give title= on the command line when TITLE is specified in the DocOnce file', filename
+            print('*** error: cannot give title= on the command line when TITLE is specified in the DocOnce file', filename)
             sys.exit(1)
     else:
         # No TITLE in the DocOnce file
@@ -287,7 +294,7 @@ def sphinx_dir():
         else:
             author = ', '.join(author[:-1]) + ' and ' + author[-1]
         if author_cml is not None:
-            print '*** error: cannot give author= on the command line when AUTHOR is specified in the DocOnce file', filename
+            print('*** error: cannot give author= on the command line when AUTHOR is specified in the DocOnce file', filename)
             sys.exit(1)
     else:
         if author_cml is None:
@@ -324,7 +331,7 @@ def sphinx_dir():
             copyright_ = copyright_cml
     else:
         if copyright_cml is not None:
-            print '*** error: cannot give copyright= on the command line when {coppyright...} is specified as part of AUTHOR in the DocOnce file', filename
+            print('*** error: cannot give copyright= on the command line when {coppyright...} is specified as part of AUTHOR in the DocOnce file', filename)
             sys.exit(1)
 
     chapters = '=========' in fstr
@@ -332,15 +339,15 @@ def sphinx_dir():
         toc_depth += 1
 
     if theme_dir is not None and conf_py is None:
-        print 'theme_dir is given, but then also conf_py must be specified'
-        print 'Abort!'
+        print('theme_dir is given, but then also conf_py must be specified')
+        print('Abort!')
         sys.exit(1)
 
-    print 'title:', title
-    print 'author:', author
-    print 'copyright:', copyright_
-    print 'theme:', theme
-    print
+    print('title:', title)
+    print('author:', author)
+    print('copyright:', copyright_)
+    print('theme:', theme)
+    print()
     time.sleep(1.5)
 
     #make_conf_py_runestone(themes, theme, title, short_title,
@@ -415,12 +422,13 @@ n
 y
 y
 y
+
 EOF
 """ % vars())
         f.close()
         system('sh tmp_sphinx_gen.sh',
                failure_info='to generate sphinx directory')
-        os.remove('tmp_sphinx_gen.sh')
+        #os.remove('tmp_sphinx_gen.sh')
     os.chdir(sphinx_rootdir)
 
     sphinx_basic_themes = 'agogo basic bizstyle classic default epub haiku nature pyramid scrolls sphinxdoc traditional'.split()
@@ -480,7 +488,7 @@ EOF
                   sphinx_basic_themes + sphinx_installed_themes
 
         if conf_py is None:
-            print 'These Sphinx themes were found:', ', '.join(sorted(themes))
+            print('These Sphinx themes were found:', ', '.join(sorted(themes)))
             make_conf_py(themes, theme, title, short_title, copyright_,
                          logo, favicon, intersphinx)
     else:
@@ -489,12 +497,16 @@ EOF
             os.mkdir('_themes')
         shutil.copy(theme_dir, os.path.join('_themes', theme_dir))
 
+
     if conf_py is not None:
         shutil.copy(os.path.join(os.pardir, conf_py), 'conf.py')
-        # Check if title, author, or copyright are given
+
+        # Edit the file appropriately if title, author, or copyright are given
         with open('conf.py', 'r') as f:
             conf_text = f.read()
 
+        # Make conf.py ready for latex, man pages, texinfo, epub etc
+        # with current doc info
         pattern = r'latex_documents = \[.*?\]'
         replacement = r"latex_documents = [('index', 'doc.tex', project, u'%s',  'manual'),]" % author
         conf_text = re.sub(pattern, replacement, conf_text,
@@ -526,6 +538,7 @@ EOF
             conf_text = re.sub(pattern, "short_title = u'%s'" % short_title,
                                conf_text, flags=re.MULTILINE)
 
+        # Fix copyright issues
         pattern = r'''copyright *= *u?['"](.*?)['"]'''
         m = re.search(pattern, conf_text)
         if m:
@@ -539,6 +552,7 @@ EOF
         with open('conf.py', 'w') as f:
             f.write(conf_text)
 
+    # Make a script that can generate all available sphinx themes
     f = open('make_themes.sh', 'w')
     f.write("""#!/bin/sh
 # Make all themes given on the command line (or if no themes are
@@ -564,8 +578,9 @@ echo "for i in sphinx-*; do google-chrome $i/index.html; done"
 
 """ % (' '.join(themes)))
     f.close()
-    os.chmod('make_themes.sh', 0755)
+    os.chmod('make_themes.sh', 0o755)
 
+    # Make index.rst main file for the document
     f = open('index.rst', 'w')
     if parts:
         files = parts
@@ -614,9 +629,14 @@ Index
 """)
     f.close()
     os.chdir(os.pardir)
+
+    # Make the automake_sphinx.py compilation file for automatically
+    # preparing the sphinx document, copying various files, and running make
+
     f = open('automake_sphinx.py', 'w')
     f.write('''\
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Autogenerated file (by doconce sphinx_dir).
 # Purpose: create HTML Sphinx version of document "%(filename)s".
 #
@@ -641,6 +661,13 @@ command_line_options = ' '.join(['"%%s"' %% arg for arg in sys.argv[1:]])
 
 sphinx_rootdir = '%(sphinx_rootdir)s'
 source_dir = sphinx_rootdir
+
+if not os.path.isdir(sphinx_rootdir):
+    print """*** error: %%(sphinx_rootdir)s does not exist. This means unsuccessful
+    doconce sphinx_dir command. Try to upgrade to latest DocOnce version.
+    (The script tmp_sphinx_gen.sh runs sphinx-quickstart - it may have failed.)
+""" %% vars()
+    sys.exit(1)
 
 def system(cmd, capture_output=False, echo=True):
     if echo:
@@ -755,6 +782,43 @@ for staticdir in staticdirs:
         cmd = 'cp -r %%(staticdir)s/* %%(source_dir)s/_static/' %% vars()
         logging.info('running %%s' %% cmd)
         system(cmd)
+
+# Create custom files in _static/_templates?
+if '**Show/Hide Code**' in rst_text:
+    with open(os.path.join(sphinx_rootdir, '_templates', 'page.html'), 'w') as f:
+        f.write("""
+{%% extends "!page.html" %%}
+
+{%% set css_files = css_files + ["_static/custom.css"] %%}
+
+{%% block footer %%}
+ <script type="text/javascript">
+    $(document).ready(function() {
+        $(".toggle > *").hide();
+        $(".toggle .header").show();
+        $(".toggle .header").click(function() {
+            $(this).parent().children().not(".header").toggle(400);
+            $(this).parent().children(".header").toggleClass("open");
+        })
+    });
+</script>
+{%% endblock %%}
+""")
+    with open(os.path.join(sphinx_rootdir, '_static', 'custom.css'), 'w') as f:
+        f.write("""
+.toggle .header {
+    display: block;
+    clear: both;
+}
+
+.toggle .header:after {
+    content: " ▼";
+}
+
+.toggle .header.open:after {
+    content: " ▲";
+}
+""")
 ''' % vars())
     # (Note: must do cp -r above since shutil.copy/copytree cannot copy a la cp -r)
     f.write('''
@@ -872,14 +936,14 @@ google-chrome %(sphinx_rootdir)s/RunestoneTools/build/index.html
 """
 ''' % vars())
     f.close()
-    os.chmod('automake_sphinx.py', 0755)
-    print """
+    os.chmod('automake_sphinx.py', 0o755)
+    print("""
 'automake_sphinx.py' contains the steps to (re)compile the sphinx
 version. You may want to edit this file, or run the steps manually,
 or just run it by
 
   python automake_sphinx.py
-"""
+""")
     # Add scrollbars to navigation bar dropdown menu in case of bootstrap
     # (this css style is already written to index.rst)
     if 'bootstrap' in theme:
@@ -905,6 +969,9 @@ def make_conf_py(themes, theme, title, short_title, copyright_,
                  logo, favicon, intersphinx):
     f = open('conf.py', 'r');  text = f.read();  f.close()
 
+    # Compensate bug July 2016 in Sphinx
+    text = text.replace('# import os', 'import os')
+
     # sphinx-quickstart sets copyright to authors with current year,
     # we customize this
     text = re.sub(r"copyright = u'(\d\d\d\d),.+",
@@ -925,18 +992,18 @@ def make_conf_py(themes, theme, title, short_title, copyright_,
             # User has given a short_title, must update short_title =
             text = re.sub(pattern1, "short_title = u'%s'" % short_title, text, flags=re.MULTILINE)
 
-    pattern = r'#?html_short_title *=.+'
+    pattern = r'#? *html_short_title *=.+'
     text = re.sub(pattern, 'html_short_title = short_title', text)
     # html_title defaults to "<project> v<release> documentation",
     # let it just be the title
-    text = re.sub('#html_title =.+', 'html_title = project', text)
+    text = re.sub(r'# *html_title =.+', 'html_title = project', text)
 
 
     themes_list = ["html_theme = '%s'" % theme] + \
                   ["#html_theme = '%s'" % t for t in sorted(themes)]
     themes_code = r"""
 
-check_additional_themes = [
+check_additional_themes= [
    'solarized', 'cloud', 'redcloud',
    'alabaster', 'bootstrap', 'impressjs']
 
@@ -956,8 +1023,8 @@ if html_theme == 'solarized':
 
     # Remove html_theme_path and html_static_path deep down in the conf.py
     # file because we need them earlier and must initialize them ourselves
-    text = re.sub(r'# Add any paths that contain custom themes.+\n#html_theme_path = \[\]', "", text)
-    text = re.sub(r"# Add any paths that contain custom static.+?\n#html_static_path = \['_static'\]", "", text)
+    text = re.sub(r'# Add any paths that contain custom themes.+\n# *html_theme_path = \[\]', "", text)
+    text = re.sub(r"# Add any paths that contain custom static.+?\n# *html_static_path = \['_static'\]", "", text)
     # Paths are added below when we try to import various themes in conf.py
 
     extensions = """\
@@ -1093,9 +1160,7 @@ intersphinx_mapping = {
     # are now in IPython, but not installed as Python modules
 
     text = re.sub(r'extensions = .*?\]', extensions, text, flags=re.DOTALL)
-    text = text.replace('#html_theme_options = {}', """\
-
-# See http://sphinx.pocoo.org/theming.html for options
+    html_theme_options = r"""# See http://sphinx.pocoo.org/theming.html for options
 if html_theme in ('default', 'classic'):
     # pygments_style =
     html_theme_options = {
@@ -1284,11 +1349,14 @@ elif html_theme in tinker_themes:
     html_theme_path += [tinkerer.paths.themes]
 
 
-""")
+"""
+    text = re.sub(r'^# *html_theme_options = \{\}', html_theme_options,
+                  text, flags=re.MULTILINE)
+    #text = re.sub('^# *html_theme_path = \[\]', html_theme_options,
 
     # Examples on settings: http://pylit.berlios.de/conf.py.html
 
-    text = re.sub('#html_use_index =.+', """
+    text = re.sub(r'# *html_use_index =.+', """
 if html_theme == 'impressjs':
     html_use_index = False
 """, text)
@@ -1297,16 +1365,16 @@ if html_theme == 'impressjs':
         # Must copy logo file
         logo_basename = os.path.basename(logo)
         shutil.copy(os.path.abspath(logo), logo_basename)
-        text = text.replace('#html_logo = None', 'html_logo = "%s"'
-                            % logo_basename)
+        text = re.sub(r'# *html_logo = None', 'html_logo = "%s"'
+                      % logo_basename, text)
 
     if favicon is not None:
         # Must copy logo file
         favicon_basename = os.path.basename(favicon)
         shutil.copy(os.path.abspath(favicon),
                     os.path.join('_static', favicon_basename))
-        text = text.replace('#html_favicon = None', 'html_favicon = "%s"'
-                            % favicon_basename)
+        text = re.sub(r'# *html_favicon = None', 'html_favicon = "%s"'
+                      % favicon_basename, text)
 
     # For tinker themes we need to copy index.rst to master.rst
     if theme in ['dark', 'flat', 'modern5', 'minimal5', 'responsive']:
@@ -1428,7 +1496,7 @@ fix_bibtex4publish
 # -----------------------------------------------------------------------
 
 def help():
-    print r"""
+    print(r"""
 
 # transform doconce file to another format
 doconce format html|latex|pdflatex|rst|sphinx|plain|gwiki|mwiki|cwiki|pandoc|st|epytext dofile
@@ -1601,7 +1669,7 @@ doconce expand_commands file1 file2 ...
 
 # insert a table of exercises in a latex file myfile.p.tex
 doconce latex_exercise_toc myfile
-"""
+""")
 #doconce teamod name
 #doconce assemble name master.do.txt
 
@@ -1612,13 +1680,13 @@ def main():
         help_format()
         sys.exit(0)
     if len(sys.argv) == 1 or misc_option('help'):
-        print 'DocOnce version', version
-        print 'Usage: doconce command [optional arguments]'
-        print 'commands: %s' % (' '.join(commands))
+        print('DocOnce version', version)
+        print('Usage: doconce command [optional arguments]')
+        print('commands: %s' % (' '.join(commands)))
         help()
         sys.exit(0)
     if misc_option('version'):
-        print 'DocOnce version', version
+        print('DocOnce version', version)
         sys.exit(0)
 
     command = sys.argv[1]
@@ -1629,23 +1697,28 @@ def main():
         # For backward compatibility:
         if len(sys.argv) >= 2 and sys.argv[1] == 'LaTeX':
             sys.argv[1] = 'latex'
-            print '\nWarning: Previous format LaTeX now has the name latex\n'
+            print('\nWarning: Previous format LaTeX now has the name latex\n')
         if len(sys.argv) >= 2 and sys.argv[1] == 'HTML':
             sys.argv[1] = 'html'
-            print '\nWarning: Previous format HTML now has the name html\n'
+            print('\nWarning: Previous format HTML now has the name html\n')
 
     # Treat wrong command name
     found = False
+    retval = None
     if command in commands:
         found = True
-        eval(command + '()')
+        retval = eval(command + '()')
     if not found:
         if command in ('html', 'latex', 'sphinx', 'rst', 'plain', 'gwiki', \
            'mwiki', 'epydoc', 'pandoc'):
-            print 'command', command, 'is not a legal command for doconce, did you mean'
-            print 'doconce format %s %s?' % (command, ' '.join(sys.argv[1:]))
+            print('command', command, 'is not a legal command for doconce, did you mean')
+            print('doconce format %s %s?' % (command, ' '.join(sys.argv[1:])))
         else:
-            print 'command "%s" is not legal, must be among\n' % command
-            print ', '.join(commands)
+            print('command "%s" is not legal, must be among\n' % command)
+            print(', '.join(commands))
+    return retval
 
-main()
+bg_session = main()
+if bg_session is not None:
+    print('...running bokeh bg_session.loop_until_closed() in the background')
+    bg_session.loop_until_closed()

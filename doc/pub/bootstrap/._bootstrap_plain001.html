@@ -16,25 +16,44 @@ Automatically generated HTML file from DocOnce source
 <link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
 -->
 
+<style type="text/css">
+
+/* Add scrollbar to dropdown menus in bootstrap navigation bar */
+.dropdown-menu {
+   height: auto;
+   max-height: 400px;
+   overflow-x: hidden;
+}
+
+/* Adds an invisible element before each target to offset for the navigation
+   bar */
+.anchor::before {
+  content:"";
+  display:block;
+  height:50px; /* fixed header height*/
+  margin:-50px 0 0; /* negative fixed header height */
+}
+</style>
+
 
 </head>
 
 <!-- tocinfo
 {'highest level': 0,
- 'sections': [(' More details on writing DocOnce documents with Bootstrap layout ',
+ 'sections': [('More details on writing DocOnce documents with Bootstrap layout',
                0,
                None,
                '___sec0'),
-              (' Navigation ', 1, None, '___sec1'),
-              (' Themes ', 1, None, '___sec2'),
-              (' Demonstrations of admons ', 1, None, '___sec3'),
-              (' Horizontal alignment of document elements ',
+              ('Navigation', 1, None, '___sec1'),
+              ('Themes', 1, None, '___sec2'),
+              ('Demonstrations of admons', 1, None, '___sec3'),
+              ('Horizontal alignment of document elements',
                1,
                'sec:examples',
                'sec:examples'),
-              (' Principles of grid structures ', 2, None, '___sec5'),
-              (' Example on a 1x3 grid structure ', 2, None, '___sec6'),
-              (' Variation of the previous grid structure using admons ',
+              ('Principles of grid structures', 2, None, '___sec5'),
+              ('Example on a 1x3 grid structure', 2, None, '___sec6'),
+              ('Variation of the previous grid structure using admons',
                2,
                None,
                '___sec7')]}
@@ -69,6 +88,7 @@ MathJax.Hub.Config({
     </button>
     <a class="navbar-brand" href="bootstrap_plain.html">Demo of the Bootstrap style</a>
   </div>
+
   <div class="navbar-collapse collapse navbar-responsive-collapse">
     <ul class="nav navbar-nav navbar-right">
       <li class="dropdown">
@@ -97,9 +117,9 @@ MathJax.Hub.Config({
 <a name="part0001"></a>
 <!-- !split -->
 
-<h1 class="page-header" id="___sec0">More details on writing DocOnce documents with Bootstrap layout <a name="___sec0"></a></h1>
+<center><h1 id="___sec0" class="anchor">More details on writing DocOnce documents with Bootstrap layout </h1></center> <!-- chapter heading -->
 
-<h1 id="___sec1">Navigation <a name="___sec1"></a></h1>
+<h1 id="___sec1" class="anchor">Navigation </h1>
 
 <p>
 A multiple-page document is as usual created by inserting <code>!split</code> at
@@ -113,7 +133,7 @@ page number is seen.
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">Terminal&gt; doconce format html mydoc --html_style=bootstrap_bluegray
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Terminal&gt; doconce format html mydoc --html_style=bootstrap_bluegray
 Terminal&gt; doconce split_html mydoc --pagination
 </pre></div>
 <p>
@@ -125,7 +145,7 @@ to make the pull down menu shorter than the page height. The
 navigation bar on top can be turned off by the option
 <code>--html_bootstrap_navbar=off</code> to the <code>doconce format</code> command.
 
-<h1 id="___sec2">Themes <a name="___sec2"></a></h1>
+<h1 id="___sec2" class="anchor">Themes </h1>
 
 <p>
 DocOnce supports the following themes from the Bootstrap family:
@@ -170,13 +190,13 @@ DocOnce supports the following themes from the Bootstrap family:
 <ul>
    <li> <code>FlatUI</code> for the <a href="http://designmodo.github.io/Flat-UI/" target="_self">Flat UI</a> theme</li>
    <li> <code>bootflat</code> for the <a href="http://bootflat.github.io/" target="_self">Bootflat</a> theme</li>
-   <li> <code>blue</code>, <code>red</code>, <code>brown</code>, <code>bluegray</code>, and <code>bloodish</code> color variations
-     of the original Bootstrap theme</li>
+   <li> <code>blue</code>, <code>red</code>, <code>brown</code>, <code>bluegray</code>, <code>bloodish</code>, <code>cbc</code>, and <code>simula</code>
+     color variations of the original Bootstrap theme</li>
 </ul>
 
 </ul>
 
-You write Boostrap HTML files as normal DocOnce documents, but there
+You write Bootstrap HTML files as normal DocOnce documents, but there
 are some additional features:
 
 <ul>
@@ -185,10 +205,10 @@ are some additional features:
    next page.</li>
  <li> Possibility to define a local grid of elements in the document to
    align admons, figures, code, or other elements horisontally.</li>
- <li> Other layouts of admons <button type="button" class="btn btn-primary btn-xs" rel="tooltip" data-placement="top" title="&quot;Admon&quot; is a short form for admonition: a box that highlights some text, e.g., as extra material or as particularly important material. DocOnce supports different types of admonitions: notice, question, summary, and warning. These can have an optional title, and some admonition styles will also include an icon image. In addition, there is a block admonition without any icon, but with an optional title."><a name="link_footnote_1"><a><a href="#def_footnote_1" style="color: white">1</a></button>.</li>
+ <li> Other layouts of admons <button type="button" class="btn btn-primary btn-xs" rel="tooltip" data-placement="top" title="&quot;Admon&quot; is a short form for admonition: a box that highlights some text, e.g., as extra material or as particularly important material. DocOnce supports different types of admonitions: notice, question, summary, and warning. These can have an optional title, and some admonition styles will also include an icon image. In addition, there is a block admonition without any icon, but with an optional title."><a href="#def_footnote_1" id="link_footnote_1" style="color: white">1</a></button>.</li>
  <li> Footnotes feature a tooltip functionality such that hovering the mouse
    over the footnote brings up a little window with the footnote
-   (try it on the footnote after <em>admon</em> right above!).</li>
+   (try it on the footnote after <em>admons</em> right above!).</li>
 </ul>
 
 <div class="panel panel-primary">
@@ -196,6 +216,7 @@ are some additional features:
   <h3 class="panel-title">Quick generation of websites</h3>
   </div>
 <div class="panel-body">
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 To make a typical website with Bootstrap layout and different type of
 pages for different things, just
 
@@ -209,15 +230,15 @@ pages for different things, just
 </div>
 
 
-<p><a name="def_footnote_1"></a><a href="#link_footnote_1"><b>1:</b></a> &quot;Admon&quot; is a short form for admonition: a
+<p id="def_footnote_1"><a href="#link_footnote_1"><b>1:</b></a> &quot;Admon&quot; is a short form for admonition: a
 box that highlights some text, e.g., as extra material or as
 particularly important material. DocOnce supports different types
 of admonitions: notice, question, summary, and warning. These
 can have an optional title, and some admonition styles will also
 include an icon image. In addition, there is a block admonition
-without any icon, but with an optional title.
+without any icon, but with an optional title.</p>
 
-<h1 id="___sec3">Demonstrations of admons <a name="___sec3"></a></h1>
+<h1 id="___sec3" class="anchor">Demonstrations of admons </h1>
 
 <p>
 The Bootstrap/Bootswatch styles support two kinds of admons:
@@ -227,15 +248,15 @@ The Bootstrap/Bootswatch styles support two kinds of admons:
  <li> panel admon (<code>bootstrap_panel</code>) where only the title has colored background</li>
 </ul>
 
-Typical commands for producing Boostrap or Bootswatch layouts are
+Typical commands for producing Bootstrap or Bootswatch layouts are
 
 <p>
 
 <!-- code=text (!bc sys) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%">Terminal&gt; doconce format html mydoc --html_style=boostrap
-Terminal&gt; doconce format html mydoc --html_style=booswatch
-Terminal&gt; doconce format html mydoc --html_style=boostrap --admon_style=bootstrap_panel
-Terminal&gt; doconce format html mydoc --html_style=booswatch_superhero --admon_style=bootstrap_panel
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Terminal&gt; doconce format html mydoc --html_style=bootstrap
+Terminal&gt; doconce format html mydoc --html_style=bootswatch
+Terminal&gt; doconce format html mydoc --html_style=bootstrap --admon_style=bootstrap_panel
+Terminal&gt; doconce format html mydoc --html_style=bootswatch_superhero --admon_style=bootstrap_panel
 </pre></div>
 <p>
 Below are some examples on admons.
@@ -246,11 +267,12 @@ Below are some examples on admons.
   <h3 class="panel-title">Warning: recall to prefix module functions</h3>
   </div>
 <div class="panel-body">
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 
 <p>
 
 <!-- code=ipy (!bc ipy) typeset with pygments style "default" -->
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span style="color: #000080; font-weight: bold">In [1]: </span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">numpy</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">np</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #000080; font-weight: bold">In [1]: </span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">numpy</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">np</span>
 
 <span style="color: #000080; font-weight: bold">In [2]: </span>x <span style="color: #666666">=</span> np<span style="color: #666666">.</span>linspace(<span style="color: #666666">0</span>, <span style="color: #666666">4*</span>np<span style="color: #666666">.</span>pi, <span style="color: #666666">11</span>)
 
@@ -283,7 +305,8 @@ This is the admon for warnings or paying attention.
   <h3 class="panel-title">Question</h3>
   </div>
 <div class="panel-body">
-How many admon styles are supported by the DocOnce Boostrap and Bootswatch
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
+How many admon styles are supported by the DocOnce Bootstrap and Bootswatch
 styles?
 </div>
 </div>
@@ -295,6 +318,7 @@ styles?
   <h3 class="panel-title">Summary</h3>
   </div>
 <div class="panel-body">
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 DocOnce supports the following elements of Bootstrap elements:
 
 <ul>
@@ -329,8 +353,8 @@ Tables often get a fancy typesetting:
 <tr><td align="left">   6          </td> <td align="right">   71,000       </td> <td align="right">   214               </td> <td align="right">   <code>NaN</code>    </td> </tr>
 </tbody>
     </table>
-  </div>
-</div> <!-- col-xs-5 -->
+  </div> <!-- col-xs-5 -->
+</div> <!-- cell row -->
 <p>
 <p>
 <!-- navigation buttons at the bottom of the page -->

@@ -21,7 +21,10 @@ fi
 # Make latest bin/doconce doc
 doconce > doconce_program.sh
 
-doconce format html $name --pygments_html_style=none --no_preprocess --no_abort --html_style=bootswatch_readable
+system doconce format html $name --pygments_html_style=none --no_preprocess --no_abort --html_style=bootswatch_readable
+
+# This document has error message from multiple labels: some:fig:label
+# (because the document is a doconce instruction!)
 
 # pdflatex
 system doconce format pdflatex $name --no_preprocess --latex_font=helvetica --no_ampersand_quote --latex_code_style=vrb --no_abort
@@ -118,5 +121,6 @@ echo "Go to the demo directory and load index.html into a web browser."
 cd ..
 dest=../../pub/$name
 cp -r demo/html demo/$name.pdf demo/$name.html $dest
+
 dest=../../../../doconce.wiki
-cp -r demo/$name.rst $dest
+cp -r demo/$name.md $dest

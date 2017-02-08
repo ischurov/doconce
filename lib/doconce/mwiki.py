@@ -30,12 +30,17 @@ demo and fill out that page with the content of a mydoconcefile.wiki,
 sometimes it is necessary to create a new account, just do that and
 go back.
 """
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
 
 
-import re, os, commands, sys
-from common import default_movie, plain_exercise, insert_code_and_tex
-from plaintext import plain_quiz
-from misc import _abort
+import re, os, subprocess, sys, subprocess
+from .common import default_movie, plain_exercise, insert_code_and_tex
+from .plaintext import plain_quiz
+from .misc import _abort
+from .doconce import errwarn
 
 def align2equations(math_text):
     """
@@ -88,7 +93,7 @@ def mwiki_code(filestr, code_blocks, code_block_types,
         tex_blocks[i], labels = remove_labels(tex_blocks[i])
         for label in labels:
             if label in filestr:
-                print '*** warning: reference to label "%s" in an equation does not work in MediaWiki' % label
+                errwarn('*** warning: reference to label "%s" in an equation does not work in MediaWiki' % label)
 
     filestr = insert_code_and_tex(filestr, code_blocks, tex_blocks, format)
 
@@ -149,8 +154,8 @@ def mwiki_figure(m):
                 output = subprocess.check_output(cmd, shell=True,
                                                  stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
-                print '\n**** warning: could not run ', cmd
-                print '       convert %s to PNG format manually' % filename
+                errwarn('\n**** warning: could not run ' + cmd)
+                errwarn('       convert %s to PNG format manually' % filename)
                 _abort()
             filename = root + '.png'
 
@@ -191,14 +196,14 @@ def mwiki_figure(m):
 
         # Skip directories - get the basename
         filename = os.path.basename(filename)
-        import urllib
-        prms = urllib.urlencode({
+        import urllib.request, urllib.parse, urllib.error
+        prms = urllib.parse.urlencode({
             'action': 'query', 'titles': 'Image:' + filename,
             'prop': 'imageinfo', 'format': 'xml'})
         url = 'http://en.wikipedia.org/w/api.php?' + prms
         try:
-            print ' ...checking if %s is stored at en.wikipedia.org/w/api.php...' % filename
-            f = urllib.urlopen(url)
+            errwarn(' ...checking if %s is stored at en.wikipedia.org/w/api.php...' % filename)
+            f = urllib.request.urlopen(url)
 
             imageinfo = f.read()
             f.close()
@@ -224,18 +229,18 @@ def mwiki_figure(m):
             timestamp = get_data('timestamp', imageinfo)
             if user:
                 found_wikimedia = True
-                print ' ...found %s at wikimedia' % filename
+                errwarn(' ...found %s at wikimedia' % filename)
                 result = r"""
     [[File:%s|frame%s|alt=%s%s]] <!-- user: %s, filename: %s, timestamp: %s -->
     """ % (filename, size, filename, caption, user, orig_filename, timestamp)
         except IOError:
-            print ' ...no Internet connection...'
+            errwarn(' ...no Internet connection...')
 
         if not found_wikimedia:
-            print ' ...for wikipedia/wikibooks you must upload image file %s to\n    common.wikimedia.org' % orig_filename
+            errwarn(' ...for wikipedia/wikibooks you must upload image file %s to\n    common.wikimedia.org' % orig_filename)
             # see http://commons.wikimedia.org/wiki/Commons:Upload
             # and http://commons.wikimedia.org/wiki/Special:UploadWizard
-            print ' ...for now we use local file %s' % filename
+            errwarn(' ...for now we use local file %s' % filename)
             # This is fine if we use github wiki
 
             result = r"""
@@ -244,7 +249,7 @@ def mwiki_figure(m):
 
     return result
 
-from common import table_analysis
+from .common import table_analysis
 
 
 def mwiki_author(authors_and_institutions, auth2index,
@@ -273,7 +278,7 @@ def mwiki_author(authors_and_institutions, auth2index,
     # we skip institutions in mwiki
     return text
 
-from gwiki import wiki_ref_and_label_common
+from .gwiki import wiki_ref_and_label_common
 
 def mwiki_ref_and_label(section_label2title, format, filestr):
     return wiki_ref_and_label_common(section_label2title, format, filestr)
@@ -388,7 +393,7 @@ def define(FILENAME_EXTENSION,
         }
 
     CODE['mwiki'] = mwiki_code
-    from html import html_table
+    from .html import html_table
     TABLE['mwiki'] = html_table
     ENVIRS['mwiki'] = {
         'warning':   lambda block, format, title='Warning', text_size='normal':
@@ -434,10 +439,10 @@ def define(FILENAME_EXTENSION,
         'search': ('.png', '.gif', '.jpg', '.jpeg'),
         'convert': ('.png', '.gif', '.jpg')}
     CROSS_REFS['mwiki'] = mwiki_ref_and_label
-    from plaintext import plain_index_bib
+    from .plaintext import plain_index_bib
     EXERCISE['mwiki'] = plain_exercise
     INDEX_BIB['mwiki'] = plain_index_bib
-    TOC['mwiki'] = lambda s: '<<<TOC>>>'  # __TOC__ will be wrongly translated to paragraph headline and needs a fix
+    TOC['mwiki'] = lambda s, f: '<<<TOC>>>'  # __TOC__ will be wrongly translated to paragraph headline and needs a fix
     QUIZ['mwiki'] = plain_quiz
 
     # document start:

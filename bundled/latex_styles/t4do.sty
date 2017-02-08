@@ -60,15 +60,18 @@
 \def\fullcolor{\color[gray]{0.85}}
 %\def\shadedcolor{\color[cmyk]{0.19,0.1,0,0}}
 
-\newcommand\mymainmatter{%
-  \mainmatter
-  % These are appropriate for printed book
+%\newcommand\mymainmatter{%
+\newcommand\setpagesize{%
+  %\mainmatter % starts arabic page numbering, wait until later
+  \clearemptydoublepage
+  % These are appropriate values for printed book
   %\evensidemargin48.3mm
   %\oddsidemargin13.3mm
   % These look better in PDF and on paper
   \evensidemargin34mm
   \oddsidemargin23.3mm
   \textwidth117mm
+  \linewidth118mm
   \pagestyle{headings}
   \def\l@section{\vskip6pt\@dottedtocline{1}{0pt}{\tocsecnum}}%
   \def\l@subsection{\@dottedtocline{2}{\tocsecnum}{\tocsubsecnum}}%
@@ -148,7 +151,7 @@
 }}
 
 \def\@makeschapterhead#1{%
-  \if@mainmatter\else\moveleft38mm\fi
+  %\if@mainmatter\else\moveleft38mm\fi
   \vbox to15\baselineskip{%
     \setbox0\vbox{%
         \begin{minipage}[t]{101mm}
@@ -347,7 +350,7 @@
    \def\@evenhead{\hspace*{-0.5mm}\vbox to\headheight{\hsize117mm\hbox
 to\hsize{\sffamily\fontsize{8.5pt}{8.5pt}\selectfont\rlap{\thepage}\hfil
                   \leftmark}\vss\fullcolor\hrule\@height 1pt\normalcolor}\hss}
-   \def\@oddhead{\if@mainmatter\else\kern-38mm\fi\vbox to\headheight{\hsize117.0mm\hbox to\hsize{\sffamily\fontsize{8.5pt}{8.5pt}\selectfont\rightmark\hfil
+   \def\@oddhead{\if@mainmatter\else\kern-0mm\fi\vbox to\headheight{\hsize118.0mm\hbox to\hsize{\sffamily\fontsize{8.5pt}{8.5pt}\selectfont\rightmark\hfil
                   \llap{\thepage}}\vss\fullcolor\hrule\@height 1pt\normalcolor}}
    \def\chaptermark##1{\markboth{{\if@chapnum %\ifnum\c@secnumdepth>\m@ne
       \thechapter\thechapterend\hskip\betweenumberspace\fi ##1}}{{\if@chapnum %\ifnum\c@secnumdepth>\m@ne
@@ -469,8 +472,8 @@ to\hsize{\sffamily\fontsize{8.5pt}{8.5pt}\selectfont\rlap{\thepage}\hfil
 \renewcommand\frontmatter{\startnewpage
   %\oddsidemargin52mm
   \oddsidemargin27mm
-  \textwidth109mm
-  \linewidth109mm
+  \textwidth100mm
+  \linewidth100mm
   \hsize118mm
             \@mainmatterfalse\pagenumbering{roman}
 	\pagestyle{fheadings}

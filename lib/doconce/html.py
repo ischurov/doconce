@@ -1,9 +1,18 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 import re, os, glob, sys, glob
-from common import table_analysis, plain_exercise, insert_code_and_tex, \
+from .common import table_analysis, plain_exercise, insert_code_and_tex, \
      indent_lines, online_python_tutor, bibliography, \
      is_file_or_url, envir_delimiter_lines, doconce_exercise_output, \
-     get_legal_pygments_lexers, has_custom_pygments_lexer, emoji_url
-from misc import option, _abort
+     get_legal_pygments_lexers, has_custom_pygments_lexer, emoji_url, \
+     fix_ref_section_chapter
+from .misc import option, _abort
+from .doconce import errwarn, locale_dict
 
 box_shadow = 'box-shadow: 8px 8px 5px #888888;'
 #box_shadow = 'box-shadow: 0px 0px 10px #888888'
@@ -40,7 +49,7 @@ def add_to_file_collection(filename, doconce_docname=None, mode='a'):
     and this name is used to set the filename of the file collection.
     Later, `doconce_docname` is not given (otherwise previous info is erased).
     """
-    if isinstance(filename, (str,unicode)):
+    if isinstance(filename, basestring):
         filenames = [filename]
     elif isinstance(filename, (list,tuple)):
         filenames = filename
@@ -582,15 +591,18 @@ display: inline;
         s += '</center>\n'
     return s
 
-def toc2html(font_size=80, bootstrap=True,
-             max_headings=17): # max no of headings in pull down menu
+def toc2html(html_style, bootstrap=True,
+             max_headings=17, # max no of headings in pull down menu
+             ):
     global tocinfo  # computed elsewhere
+
     # level_depth: how many levels that are represented in the toc
     level_depth = int(option('toc_depth=', '-1'))
-    if level_depth == -1:
+    if level_depth == -1:  # Use -1 to indicate that doconce decides
         # Compute suitable depth in toc
         if bootstrap:
-            # We can have max 17 lines, so analyze the toc
+            # We can have max 17 lines in a dropdown box without a scrollbar
+            # so see what is suitable to include in such a box
             level2no = {}
             for item in tocinfo['sections']:
                 level = item[1]
@@ -619,6 +631,11 @@ def toc2html(font_size=80, bootstrap=True,
     else:
         level_max = level_min + level_depth - 1
 
+    # font types (bootstrap pull-down Contents menu)
+    style = 'font-size: 80%;'
+    if html_style in ['bootswatch_yeti', 'bootswatch_lumen', 'bootswatch_slate', 'bootswatch_superhero']:
+        style = 'font-size: 14px; padding: 4px 15px;'
+
     ul_class = ' class="nav"' if bootstrap else ''
     toc_html = ''
     uls = 0  # no of active <ul> sublists
@@ -633,7 +650,7 @@ def toc2html(font_size=80, bootstrap=True,
         btitle = title = title.strip()
         if level_depth >= 2 and level == level_min:
             btitle = '<b>%s</b>' % btitle  # bold for highest level
-        toc_html += '     <!-- navigation toc: --> <li><a href="#%s" style="font-size: %d%%;">%s%s</a></li>\n' % (href, font_size, spaces, btitle)
+        toc_html += '     <!-- navigation toc: --> <li><a href="#%s" style="%s">%s%s</a></li>\n' % (href, style, spaces, btitle)
         if nested_list and i < len(tocinfo['sections'])-1 and \
                tocinfo['sections'][i+1][1] < level:
             toc_html += '     </ul>\n'
@@ -643,13 +660,224 @@ def toc2html(font_size=80, bootstrap=True,
         for j in range(uls):
             toc_html += '     </ul>\n'
     if toc_html == '' and tocinfo['sections']:
-        print '*** error: no table of contents generated from toc2html - BUG in doconce'
+        errwarn('*** error: no table of contents generated from toc2html - BUG in doconce')
         _abort()
     return toc_html
 
+class CreateApp(object):
+    """
+    Class for interactive Bokeh plots.
+    Written by Fredrik Eikeland Fossan <fredrik.e.fossan@ntnu.no>.
+    """
+    def __init__(self, plot_info):
+        from numpy import linspace
+        from bokeh.models.widgets import Slider, TextInput
+        from bokeh.models import ColumnDataSource, HBox, VBoxForm
+
+        N = 200
+        colors = ['red', 'green', 'indigo', 'orange', 'blue', 'grey', 'purple']
+        possible_inputs = ['x_axis_label', 'xrange', 'yrange', 'sliderDict', 'title', 'number_of_graphs']
+
+        y = None
+        # Formula given or just Python function?
+        if ".py" in plot_info[0]:
+            # Python module with compute function
+            compute = None
+            msg = "from " + plot_info[0][0:-3] + " import compute"
+            errwarn('...exec: ' + msg)
+            exec(msg)
+            import inspect
+            arg_names = inspect.getargspec(compute).args
+            argString = ""
+            for n, arg in enumerate(arg_names):
+                argString = argString + arg
+                if n != len(arg_names) - 1:
+                    argString = argString + ", "
+            computeString = "y = compute(" + argString + ")"
+            self.computeString = computeString
+            self.compute = compute
+
+        self.curve = plot_info[0]
+        x_axis_label = None
+        y_axis_label = None
+        xrange = (0, 10)
+        yrange = (0, 10)
+        sliderDict = None
+        title = None
+        number_of_graphs = None
+        legend = None
+        reverseAxes = False
+
+        self.source = []
+        self.sliderList = []
+
+        for n in range(1,len(plot_info)):
+            # Update inputs
+
+            exec(plot_info[n].strip())
+
+        self.x = linspace(xrange[0], xrange[1], N)
+        self.reverseAxes = reverseAxes
+        if sliderDict != None:
+            self.parameters = list(sliderDict.keys())
+
+            for n, param in enumerate(self.parameters):
+                exec("sliderInstance = Slider(" + sliderDict[param] + ")") # Todo: Fix so exec is not needed
+                exec("self.sliderList.append(sliderInstance)") # Todo: Fix so exec is not needed
+                # get first value of param
+                exec(param + " = "  + 'self.sliderList[n].value') # Todo: Fix so exec is not needed
+
+        # Set up plot
+        from bokeh.plotting import Figure
+        assert len(xrange) == 2; assert len(yrange) == 2
+        self.plot = Figure(
+            plot_height=400, plot_width=400, title=title,
+            tools="crosshair,pan,reset,resize,save,wheel_zoom",
+            x_range=xrange, y_range=yrange)
+        self.plot.xaxis.axis_label = x_axis_label
+        self.plot.yaxis.axis_label = y_axis_label
+        # generate the first curve:
+        x = self.x
+        if ".py" in plot_info[0]:
+            exec(self.computeString)
+            errwarn('...exec: ' + self.computeString)
+        else:
+            exec(plot_info[0]) #  execute y = f(x, params)
+            errwarn('...exec: ' + plot_info[0])
+        #print 'XXX', y  # nan for womersley test!
+
+        if type(y) is list:
+            if legend == None:
+                legend = [legend]*len(y)
+            for n in range(len(y)):
+
+                if self.reverseAxes:
+                    x_plot = y[n]
+                    y_plot = self.x
+                else:
+                    x_plot = self.x
+                    y_plot = y[n]
+                self.source.append(
+                    ColumnDataSource(data=dict(x=x_plot, y=y_plot)))
+                self.plot.line(
+                    'x', 'y',
+                    source=self.source[n], line_width=3,
+                    line_color=colors[n], legend=legend[n])
+        else:
+            if self.reverseAxes:
+                x_plot = y
+                y_plot = self.x
+            else:
+                x_plot = self.x
+                y_plot = y
+            self.source.append(
+                ColumnDataSource(data=dict(x=x_plot, y=y_plot)))
+            self.plot.line(
+                'x', 'y',
+                source=self.source[0], line_width=3, legend=legend)
+
+    def update_data(self, attrname, old, new):
+        # Get the current slider values
+        y = None
+        x = self.x
+        for n, param in enumerate(self.parameters):
+            exec(param + " = "  + 'self.sliderList[n].value')
+        # generate the new curve:
+        if ".py" in self.curve:
+            compute = self.compute
+            exec(self.computeString) #  execute y = compute(x, params)
+            errwarn('...exec: ' + self.computeString)
+        else:
+            exec(self.curve) #  execute y = f(x, params)
+            errwarn('...exec: ' + self.curve)
+
+        if type(y) is list:
+            for n in range(len(y)):
+                if self.reverseAxes:
+                    x_plot = y[n]
+                    y_plot = self.x
+                else:
+                    x_plot = self.x
+                    y_plot = y[n]
+                self.source[n].data = dict(x=x_plot, y=y_plot)
+        else:
+            if self.reverseAxes:
+                x_plot = y
+                y_plot = x
+            else:
+                x_plot = x
+                y_plot = y
+            self.source[0].data = dict(x=x_plot, y=y_plot)
+
+
+def embed_IBPLOTs(filestr, format):
+    """
+    Replace all IBPLOT tags by proper script and bokeh code.
+    Written by Fredrik Eikeland Fossan with edits by H. P. Langtangen.
+    """
+    from bokeh.document import Document
+    from bokeh.client import push_session
+    from bokeh.embed import autoload_server
+    from bokeh.models import HBox, VBoxForm
+
+    document = Document()
+    session = push_session(document)
+
+    # Find all IBPLOT tags and store them
+    IBPLOT_tags = []
+    IBPLOT_lines = []
+    for line in filestr.splitlines():
+        if line.startswith('IBPLOT:'):
+            errwarn('*** found IBPLOT command\n    ' + line)
+            try:
+                plot_info = line[8:-1].split(';')
+            except Exception:
+                plot_info = []
+            if not plot_info:
+                errwarn('*** error: inline plot specification\n    %s\ncould not be split wrt ;' % line)
+                _abort()
+
+            new_plot_info = []
+            n = 0
+            for element in plot_info:
+                if not element:
+                    continue
+                if element[0] ==' ':
+                    element = element[1:]
+                if element[-1] ==' ':
+                    element = element[:-1]
+                if element[-1] == ']' and n == len(plot_info) -1:
+                    element = element[:-1]
+                new_plot_info.append(element)
+                n += 1
+            IBPLOT_tags.append(new_plot_info)
+            IBPLOT_lines.append(line)
+
+    appLayoutList = []
+    for app_info in IBPLOT_tags:
+        app = CreateApp(app_info)
+        for w in app.sliderList:
+            w.on_change('value', app.update_data)
+        inputs = VBoxForm(children=app.sliderList)
+        layout = HBox(children=[inputs, app.plot], width=800)
+        document.add_root(layout)
+        appLayoutList.append(layout)
+
+    # Replace each IBPLOT tag by proper HTML code
+    app_no = 0
+    for tags, line in zip(IBPLOT_tags, IBPLOT_lines):
+        text = autoload_server(appLayoutList[app_no], session_id=session.id)
+        if format == 'html':
+            filestr = filestr.replace(line, '<!--\n%s\n-->\n' % line + text)
+        else:
+            filestr = filestr.replace(line, '')
+        app_no += 1
+
+    document.add_root(layout)
+    return filestr, session
 
 def embed_newcommands(filestr):
-    from expand_newcommands import process_newcommand
+    from .expand_newcommands import process_newcommand
     newcommands_files = list(
         sorted([name
                 for name in glob.glob('newcommands*.tex')
@@ -673,20 +901,26 @@ def embed_newcommands(filestr):
 
 def mathjax_header(filestr):
     newcommands = embed_newcommands(filestr)
+    if option('siunits'):
+        siunitx1 = '\nMathJax.Ajax.config.path["Contrib"] = "https://cdn.mathjax.org/mathjax/contrib";'
+        siunitx2 = ', "[Contrib]/siunitx/unpacked/siunitx.js"'
+    else:
+        siunitx1 = siunitx2 = ''
+
     mathjax_script_tag = """
 
-<script type="text/x-mathjax-config">
+<script type="text/x-mathjax-config">%s
 MathJax.Hub.Config({
   TeX: {
      equationNumbers: {  autoNumber: "AMS"  },
-     extensions: ["AMSmath.js", "AMSsymbols.js", "autobold.js", "color.js"]
+     extensions: ["AMSmath.js", "AMSsymbols.js", "autobold.js", "color.js"%s]
   }
 });
 </script>
 <script type="text/javascript"
  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
 </script>
-"""
+""" % (siunitx1, siunitx2)
     #<meta tag is valid only in html head anyway, so this was removed:
     #<!-- Fix slow MathJax rendering in IE8 -->
     #<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7">
@@ -708,6 +942,9 @@ def html_code(filestr, code_blocks, code_block_types,
               tex_blocks, format):
     """Replace code and LaTeX blocks by html environments."""
 
+    # The test below is not needed anymore: doconce tests valid
+    # refs and labels for all formats now
+    '''
     # Do one fix before verbatim blocks are inserted
     # (where ref{} and label{} constructions are to be as is)
     allow_refs_to_external_docs = option('allow_refs_to_external_docs')
@@ -718,15 +955,15 @@ def html_code(filestr, code_blocks, code_block_types,
         # leave out eq.ref, verbatim (<code>ref... etc)
         remaining = re.findall('[^(>A-Za-z](ref\{.+?\})[^)<]', filestr)
         if remaining:
-            print '*** error: references to labels not defined in this document'
-            #print '\n', '\n'.join(remaining)
+            errwarn('*** error: references to labels not defined in this document')
+            #errwarn('\n + '\n'.join(remaining))
             index = 0
             for r in remaining:
-                print r + ':'
+                errwarn(r + ':')
                 index = filestr.find(r, index)  # search since last occurence
-                print '  ', filestr[index-35:index+35], '\n---------------'
+                errwarn('   ' + filestr[index-35:index+35] + '\n---------------')
                 index += len(r)
-            print """
+            errwarn("""
 Causes of missing labels:
 1: label is inside a generalized reference ref[][][],
    use the --allow_refs_to_external_docs option to remove
@@ -734,17 +971,18 @@ Causes of missing labels:
 2: label is defined in another file
 3: preprocessor if-else has left the label out
 4: forgotten to define the label
-"""
+""")
             if not allow_refs_to_external_docs:
                 _abort()
+    '''
 
     html_style = option('html_style=', '')
     pygm_style = option('pygments_html_style=', default=None)
     legal_pygm_styles = 'monokai manni rrt perldoc borland colorful default murphy vs trac tango fruity autumn bw emacs vim pastie friendly native'.split()
     if pygm_style not in legal_pygm_styles:
         if pygm_style not in (None, "none", "None", "off", "no"):
-            print '*** error: wrong pygments style "%s"' % pygm_style
-            print '    must be among\n%s' % str(legal_pygm_styles)[1:-1]
+            errwarn('*** error: wrong pygments style "%s"' % pygm_style)
+            errwarn('    must be among\n%s' % str(legal_pygm_styles)[1:-1])
             _abort()
 
     # Mapping from envir (+cod/pro if present) to pygment style
@@ -801,23 +1039,23 @@ Causes of missing labels:
             # Fix style for solarized and rossant
             if option('html_style=') == 'solarized':
                 if pygm_style != 'perldoc':
-                    print '*** warning: --pygm_style=%s is not recommended when --html_style=solarized' % pygm_style
-                    print '    automatically changed to --html_style=perldoc'
+                    errwarn('*** warning: --pygm_style=%s is not recommended when --html_style=solarized' % pygm_style)
+                    errwarn('    automatically changed to --html_style=perldoc')
                     pygm_style = 'perldoc'
             elif option('html_style=') == 'solarized_dark':
                 if pygm_style != 'friendly':
-                    print '*** warning: --pygm_style=%s is not recommended when --html_style=solarized_dark' % pygm_style
-                    print '    automatically changed to --html_style=friendly'
-                    print '    (it is recommended not to specify --pygm_style for solarized_dark)'
+                    errwarn('*** warning: --pygm_style=%s is not recommended when --html_style=solarized_dark' % pygm_style)
+                    errwarn('    automatically changed to --html_style=friendly')
+                    errwarn('    (it is recommended not to specify --pygm_style for solarized_dark)')
                     pygm_style = 'friendly'
 
         legal_lexers = get_legal_pygments_lexers()
         legal_styles = list(get_all_styles())
         legal_styles += ['no', 'none', 'off']
         if pygm_style not in legal_styles:
-            print 'pygments style "%s" is not legal, must be among\n%s' % (pygm_style, ', '.join(legal_styles))
+            errwarn('pygments style "%s" is not legal, must be among\n%s' % (pygm_style, ', '.join(legal_styles)))
             #_abort()
-            print 'using the "default" style...'
+            errwarn('using the "default" style...')
             pygm_style = 'default'
         if pygm_style in ['no', 'none', 'off']:
             pygm = None
@@ -846,6 +1084,11 @@ Causes of missing labels:
             if code_block_types[i].endswith('cod') or \
                code_block_types[i].endswith('pro'):
                 type_ = code_block_types[i][:-3]
+            elif code_block_types[i].endswith('cod-h') or \
+                 code_block_types[i].endswith('pro-h'):
+                type_ = code_block_types[i][:-5]
+            elif code_block_types[i].endswith('-h'):
+                type_ = code_block_types[i][:-2]
             else:
                 type_ = code_block_types[i]
             if type_ in envir2pygments:
@@ -861,6 +1104,20 @@ Causes of missing labels:
 
             if code_block_types[i] == 'ccq':
                 result = '<blockquote>\n%s</blockquote>' % result
+
+            if code_block_types[i].endswith('-h'):
+                # Embed some jquery JavaScript for a show/hide button
+                result = """
+<script type="text/javascript">
+function show_hide_code%d(){
+  $("#code%d").toggle();
+}
+</script>
+<button type="button" onclick="show_hide_code%d()">Show/hide code</button>
+<div id="code%d" style="display:none">
+%s
+</div>
+""" % (i, i, i, i, result)
 
             result = '<!-- code=%s%s typeset with pygments style "%s" -->\n' % (language, '' if code_block_types[i] == '' else ' (!bc %s)' % code_block_types[i], pygm_style) + result
             # Fix ugly error boxes
@@ -889,18 +1146,18 @@ Causes of missing labels:
             m_new = re.sub(r'([^ ])<', '\g<1> <', m_new)
             m_new = re.sub(r'<([^ ])', '< \g<1>', m_new)
             if m_new != m:
-                print '*** warning: inline math in HTML must have space around <:'
-                print '    %s  ->  %s' % (m, m_new)
+                errwarn('*** warning: inline math in HTML must have space around <:')
+                errwarn('    %s  ->  %s' % (m, m_new))
             filestr = filestr.replace(r'\( %s \)' % m, r'\( %s \)' % m_new)
     for i in range(len(tex_blocks)):
         if re.search(r'[^ {}]<', tex_blocks[i]) or re.search(r'<[^ {}]', tex_blocks[i]):
-            print '*** warning: math block in HTML must have space around <:'
-            print tex_blocks[i]
+            errwarn('*** warning: math block in HTML must have space around <:')
+            errwarn(tex_blocks[i])
             tex_blocks[i] = re.sub(r'([^ {}])<', '\g<1> <', tex_blocks[i])
             tex_blocks[i] = re.sub(r'<([^ {}])', '< \g<1>', tex_blocks[i])
-            print '    changed to'
-            print tex_blocks[i]
-            print
+            errwarn('    changed to')
+            errwarn(tex_blocks[i])
+            print()
 
     if option('wordpress'):
         # Change all equations to $latex ...$\n
@@ -936,14 +1193,14 @@ Causes of missing labels:
                             '^ *(<a +href=|<em>|<b>|<code>|\$latex |<font)',]
         acceptlines_present = ['([A-Za-z0-9.,;:?)]|</a>|</em>|</b>|</code>|\$|</font>) *$',]
         for i in range(len(lines)-1):
-            #print 'Line:', i, lines[i]
+            #errwarn('Line:', i, lines[i])
             lines[i] += '\n'
             # Ignore merging this line with the next?
             ignore = False
             for pattern in ignorelines:
                 if re.search(pattern, lines[i]):
                     ignore = True
-                    #print 'This is an ignore line', pattern
+                    #errwarn('This is an ignore line ' + pattern)
                     break
             if not ignore:
                 # Next line must not be an ignore line
@@ -951,27 +1208,27 @@ Causes of missing labels:
                 for pattern in ignorelines:
                     if re.search(pattern, lines[i+1]):
                         ignore = True
-                        #print 'Next line is an ignore line', pattern
+                        #errwarn('Next line is an ignore line ' + pattern)
                         break
                 # Present line must be an accept line
                 accept_present = False
                 for pattern in acceptlines_present:
                     if re.search(pattern, lines[i]):
                         accept_present = True
-                        #print 'Present line is an accept line', pattern
+                        #errwarn('Present line is an accept line ' + pattern)
                         break
                 # Next line must be an accept line
                 accept_next = False
                 for pattern in acceptlines_next:
                     if re.search(pattern, lines[i+1]):
                         accept_next = True
-                        #print 'Next line is an accept line', pattern
+                        #errwarn('Next line is an accept line', pattern)
                         break
                 if (not ignore) and accept_present and accept_next:
                     # Line ends in correct character
                     # Merge with next line
                     lines[i] = lines[i].rstrip() + ' '
-                    #print 'Merge!'
+                    #errwarn('Merge!')
         filestr = ''.join(lines)
         # Must do the removal of \n in <li>.+?</li> later when </li> is added
 
@@ -990,7 +1247,7 @@ Causes of missing labels:
             tex_blocks[i] = re.sub(r'^label\{', '\\label{', tex_blocks[i],
                                    flags=re.MULTILINE)
 
-    from doconce import debugpr
+    from .doconce import debugpr
     debugpr('File before call to insert_code_and_tex (format html):', filestr)
     filestr = insert_code_and_tex(filestr, code_blocks, tex_blocks, format)
     debugpr('File after call to insert_code_and tex (format html):', filestr)
@@ -1058,11 +1315,15 @@ Causes of missing labels:
     # --- Final fixes for html format ---
 
     # Replace old-fashion <a name=""></a> anchors with id=""
+    if option('html_style=', '').startswith('boots'):
+        filestr = re.sub(r'<h(\d)(.*?)>(.+?) <a name="(.+?)"></a>',
+                     r'<h\g<1>\g<2> id="\g<4>" class="anchor">\g<3>', filestr)
+        # (use class="anchor" such that we can easily set the position of
+        # headings in e.g. bootstrap CSS; use :_id to make h1/h2 identifier different)
     filestr = re.sub(r'<h(\d)(.*?)>(.+?) <a name="(.+?)"></a>',
                      r'<h\g<1>\g<2> id="\g<4>">\g<3>', filestr)
-    filestr = re.sub(r'<a name="(.+?)"></a>',
+    filestr = re.sub(r'<a name="([^"]+)"></a>',
                      r'<div id="\g<1>"></div>', filestr)
-
 
     # Add MathJax script if math is present (math is defined right above)
     if math and MATH_TYPESETTING == 'MathJax':
@@ -1075,7 +1336,7 @@ Causes of missing labels:
             filestr = latex + filestr
 
     # Copyright
-    from common import get_copyfile_info
+    from .common import get_copyfile_info
     cr_text = get_copyfile_info(filestr, format=format)
     if cr_text is not None:
         filestr = filestr.replace('Copyright COPYRIGHT_HOLDERS',
@@ -1108,7 +1369,7 @@ Causes of missing labels:
                          filestr, flags=re.DOTALL)
 
     # Find all URLs to files (non http, ftp)
-    import common
+    from . import common
     pattern = '<a href=' + common._linked_files
     files = re.findall(pattern, filestr)
     for f, dummy in files:
@@ -1139,21 +1400,23 @@ Causes of missing labels:
     # Add header from external template
     template = option('html_template=', default='')
     if html_style == 'vagrant':
-        print '*** warning: --html_style=vagrant is deprecated,'
-        print '    just use bootstrap as style and combine with'
-        print '    template from bundled/html_styles/style_vagrant'
+        errwarn('*** warning: --html_style=vagrant is deprecated,')
+        errwarn('    just use bootstrap as style and combine with')
+        errwarn('    template from bundled/html_styles/style_vagrant')
         html_style == 'bootstrap'
 
     # Make toc for navigation
     toc_html = ''
     if html_style.startswith('boots'):
-        toc_html = toc2html(bootstrap=True, max_headings=10000)
+        toc_html = toc2html(html_style, bootstrap=True, max_headings=10000)
+        # Fix
+        toc_html = re.sub(r'id="table_of_contents">', 'id="table_of_contents" class="anchor">', toc_html)
     elif html_style in ('solarized',):
-        toc_html = toc2html(bootstrap=False)
+        toc_html = toc2html(html_style, bootstrap=False)
     # toc_html lacks formatting, run some basic formatting here
     tags = 'emphasize', 'bold', 'math', 'verbatim', 'colortext'
     # drop URLs in headings?
-    import common
+    from . import common
     for tag in tags:
         toc_html = re.sub(common.INLINE_TAGS[tag],
                           common.INLINE_TAGS_SUBST[format][tag],
@@ -1165,9 +1428,9 @@ Causes of missing labels:
 
         header = '<!-- document title -->' in filestr  # will the html file get a header?
         if header:
-            print """\
+            errwarn("""\
 *** warning: TITLE may look strange with a template -
-             it is recommended to comment out the title: #TITLE:"""
+             it is recommended to comment out the title: #TITLE:""")
             pattern = r'<center><h1>(.+?)</h1></center>  <!-- document title -->'
             m = re.search(pattern, filestr)
             if m:
@@ -1175,10 +1438,10 @@ Causes of missing labels:
 
         authors = '<!-- author(s):' in filestr
         if authors:
-            print """\
+            errwarn("""\
 *** warning: AUTHOR may look strange with a template -
              it is recommended to comment out all authors: #AUTHOR.
-             Usually better to hardcode authors in a footer in the template."""
+             Usually better to hardcode authors in a footer in the template.""")
 
         # Extract title
         if title == '':
@@ -1206,20 +1469,20 @@ Causes of missing labels:
         try:
             f = open(template, 'r'); template = f.read(); f.close()
         except IOError as e:
-            print '*** error: could not find template "%s"' % template
-            print e
+            errwarn('*** error: could not find template "%s"' % template)
+            errwarn(e)
             _abort()
 
         # Check that template does not have "main content" begin and
         # end lines that may interfere with the automatically generated
         # ones in DocOnce (may destroy the split_html command)
-        from doconce import main_content_char as _c
+        from .doconce import main_content_char as _c
         m = re.findall(r'(<!-- %s+ main content %s+)' % (_c,_c), template)
         if m:
-            print '*** error: template contains lines that may interfere'
-            print '    with markers that doconce inserts - remove these'
+            errwarn('*** error: template contains lines that may interfere')
+            errwarn('    with markers that doconce inserts - remove these')
             for line in m:
-                print line
+                errwarn(line)
             _abort()
 
         # template can only have slots for title, date, main, table_of_contents
@@ -1244,8 +1507,8 @@ Causes of missing labels:
         variables.update({'title': title, 'date': date, 'main': filestr,
                           'table_of_contents': toc_html})
         if '%(date)s' in template and date == '':
-            print '*** warning: template contains date (%(date)s)'
-            print '    but no date is specified in the document'
+            errwarn('*** warning: template contains date (%(date)s)')
+            errwarn('    but no date is specified in the document')
         filestr = template % variables
 
     if html_style.startswith('boots'):
@@ -1255,13 +1518,24 @@ Causes of missing labels:
     else:
         filestr = filestr.replace(' <!-- chapter heading -->', ' <hr>')
     if html_style.startswith('boots'):
-        # Insert toc
+        # Insert toc if toc
         if '***TABLE_OF_CONTENTS***' in filestr:
-            filestr = filestr.replace('***TABLE_OF_CONTENTS***', toc_html)
+            contents = locale_dict[locale_dict['language']]['Contents']
+            try:
+                filestr = filestr.replace('***TABLE_OF_CONTENTS***',
+                                          toc_html)
+                filestr = filestr.replace('***CONTENTS_PULL_DOWN_MENU***',
+                                          contents)
+            except UnicodeDecodeError:
+                filestr = filestr.replace('***TABLE_OF_CONTENTS***',
+                                          toc_html)
+                filestr = filestr.replace('***CONTENTS_PULL_DOWN_MENU***',
+                                          contents)
+
         jumbotron = option('html_bootstrap_jumbotron=', 'on')
         if jumbotron != 'off':
             # Fix jumbotron for title, author, date, toc, abstract, intro
-            pattern = r'(^<center><h1>[^\n]+</h1></center>[^\n]+document title.+?)(^<!-- !split -->|^<h[123] id="|^<div class="page-header">)'
+            pattern = r'(^<center><h1>[^\n]+</h1></center>[^\n]+document title.+?)(^<!-- !split -->|^<h[123] id="|^<center><h1 id="|^<div class="page-header">)'
             # Exclude lists (not a good idea if they are part of the intro...)
             #pattern = r'(^<center><h1>[^\n]+</h1></center>[^\n]+document title.+?)(^<!-- !split -->|^<h[123]>[^\n]+?<a name=[^\n]+?</h[123]>|^<div class="page-header">|<[uo]l>)'
             m = re.search(pattern, filestr, flags=re.DOTALL|re.MULTILINE)
@@ -1398,7 +1672,7 @@ def process_grid_areas(filestr):
             # order while the output is traversed in correct cell order)
             new_text = '<div class="row"> <!-- begin cell row -->\n'
             for c in range(num_columns):
-                new_text += '  <div class="col-sm-4">'
+                new_text += '  <div class="col-sm-4">\n    <p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->'
                 for r in range(num_rows):
                     new_text += table[r][c]
                 new_text += '  </div> <!-- column col-sm-4 -->\n'
@@ -1448,8 +1722,8 @@ def interpret_bokeh_plot(text):
     # Extract the script and all div tags
     scripts = re.findall(r'<script type="text/javascript">.+?</script>', text, flags=re.DOTALL)
     if len(scripts) != 2:
-        print '*** warning: bokeh file contains more than two script tags,'
-        print '    will be using the last one! (use output_file(..., mode="cdn"))'
+        errwarn('*** warning: bokeh file contains more than two script tags,')
+        errwarn('    will be using the last one! (use output_file(..., mode="cdn"))')
     script = scripts[-1]
     divs = re.findall(r'<div class="plotdiv".+?</div>', text, flags=re.DOTALL)
     return script, divs
@@ -1459,6 +1733,19 @@ def html_figure(m):
     caption = m.group('caption').strip()
     filename = m.group('filename').strip()
     opts = m.group('options').strip()
+
+    # Extract figure label
+    pattern = r'(label\{(.+?)\})'
+    m = re.search(pattern, caption)
+    if m:
+        label = '<!-- figure label: --> %s' % m.group(1)
+        caption = re.sub(pattern,
+                         ' <!-- caption label: %s -->' % m.group(2),
+                         caption)
+    else:
+        label = ''
+    # Place label in top of the figure such that links point to the
+    # top regardless of whether the caption is at the top of bottom
 
     sidecaption = 0
     if opts:
@@ -1481,7 +1768,7 @@ def html_figure(m):
             bokeh_plot = True
             script, divs = interpret_bokeh_plot(text)
         else:
-            print '*** error: figure file "%s" must be a Bokeh plot' % filename
+            errwarn('*** error: figure file "%s" must be a Bokeh plot' % filename)
             _abort()
 
     if not filename.startswith('http') and not bokeh_plot:
@@ -1505,32 +1792,35 @@ def html_figure(m):
        if sidecaption == 0:
            if placement == 'top':
                s = """
-<center> <!-- figure -->%s
+<center> %s <!-- FIGURE -->%s
 <center><p class="caption"> %s </p></center>
 <p>%s</p>%s
 </center>
-""" % (top_hr, caption, image, bottom_hr)
+""" % (label, top_hr, caption, image, bottom_hr)
            else:
                s = """
-<center> <!-- figure -->%s
+<center> %s <!-- FIGURE -->%s
 <p>%s</p>
 <center><p class="caption"> %s </p></center>%s
 </center>
-""" % (top_hr, image, caption, bottom_hr)
+""" % (label, top_hr, image, caption, bottom_hr)
        else:
            # sidecaption is implemented as table
            s = """
-<center> <!-- figure -->%s
+<center> %s <!-- FIGURE -->%s
 <table><tr>
 <td>%s</td>
 <td><p class="caption"> %s </p></td>
 </tr></table>%s
 </center>
-""" % (top_hr, image, caption, bottom_hr)
+""" % (label, top_hr, image, caption, bottom_hr)
        return s
     else:
        # Just insert image file when no caption
-       return '<center><p>%s</p></center>' % image
+       #s = '<center><p>%s</p></center>' % image # without <linebreak>
+       # with two <linebreak>:
+       s = '<br /><br /><center><p>%s</p></center><br /><br />' % image
+       return s
 
 
 def html_footnotes(filestr, format, pattern_def, pattern_footnote):
@@ -1560,7 +1850,7 @@ def html_footnotes(filestr, format, pattern_def, pattern_footnote):
         if name in name2index:
             i = name2index[m.group('name')]
         else:
-            print '*** error: found footnote with name "%s", but this one is not defined' % name
+            errwarn('*** error: found footnote with name "%s", but this one is not defined' % name)
             _abort()
         if option('html_style=', '').startswith('boots'):
             # Use a tooltip construction so the footnote appears when hovering over
@@ -1570,25 +1860,25 @@ def html_footnotes(filestr, format, pattern_def, pattern_footnote):
             if '*' in text:
                 newtext, n = re.subn(r'\*(.+?)\*', r'\g<1>', text)
                 if n > 0:
-                    print '*** warning: found emphasis tag *...* in footnote, which was removed'
-                    print '    in tooltip (since it does not work with bootstrap tooltips)'
-                    print '    but not in the footnote itself.'
-                    print text, '\n'
+                    errwarn('*** warning: found emphasis tag *...* in footnote, which was removed')
+                    errwarn('    in tooltip (since it does not work with bootstrap tooltips)')
+                    errwarn('    but not in the footnote itself.')
+                    errwarn(text + '\n')
                 text = newtext
             if '`' in text:
                 newtext, n = re.subn(r'`(.+?)`', r'\g<1>', text)
                 if n > 0:
-                    print '*** warning: found inline code tag `...` in footnote, which was removed'
-                    print '    in tooltip (since it does not work with bootstrap tooltips):'
-                    print text, '\n'
+                    errwarn('*** warning: found inline code tag `...` in footnote, which was removed')
+                    errwarn('    in tooltip (since it does not work with bootstrap tooltips):')
+                    errwarn(text + '\n')
                 text = newtext
             if '"' in text:
                 newtext, n1 = re.subn(r'"(.+?)" ?:\s*"(.+?)"', r'\g<1>', text)
                 newtext, n2 = re.subn(r'URL ?:\s*"(.+?)"', r'\g<1>', newtext)
                 if n1 > 0 or n2 > 0:
-                    print '*** warning: found link tag "...": "..." in footnote, which was removed'
-                    print '    from tooltip (since it does not work with bootstrap tooltips)'
-                    print text
+                    errwarn('*** warning: found link tag "...": "..." in footnote, which was removed')
+                    errwarn('    from tooltip (since it does not work with bootstrap tooltips)')
+                    errwarn(text)
                 text = newtext
             html = ' <button type="button" class="btn btn-primary btn-xs" rel="tooltip" data-placement="top" title="%s"><a href="#def_footnote_%s" id="link_footnote_%s" style="color: white">%s</a></button>' % (text, i, i, i)
             # (<a name=""></a> is later replaced by a div tag)
@@ -1611,8 +1901,6 @@ def html_table(table):
     if bootstrap:
         #span = ncolumns+1
         # Base span on total width of all columns
-        #print 'XXX', table['rows'][3]
-        #print 'XXX total length:', sum(column_width), '%.1f' % (sum(column_width)/100.0*12)
         span = min(int(sum(column_width)/100.0*12), 12)
         s = """
 <div class="row">
@@ -1703,12 +1991,12 @@ def html_movie(m):
         # frame_*.png
         # frame_%04d.png:0->120
         # http://some.net/files/frame_%04d.png:0->120
-        import DocWriter
+        from . import DocWriter
         try:
             header, jscode, form, footer, frames = \
                     DocWriter.html_movie(filename, **kwargs)
         except ValueError as e:
-            print '*** error: %s' % str(e)
+            errwarn('*** error: %s' % str(e))
             _abort()
         text = jscode + form
         if caption:
@@ -1748,7 +2036,7 @@ def html_movie(m):
         #basename = os.path.basename(filename)
         stem, ext = os.path.splitext(filename)
         if ext == '':
-            print '*** error: never specify movie file without extension'
+            errwarn('*** error: never specify movie file without extension')
             _abort()
 
         if ext in ('.mp4', '.ogg', '.webm'):
@@ -1790,10 +2078,12 @@ def html_movie(m):
                     text += ext2source_command[ext]
                     movie_exists = True
             if not movie_exists:
-                print '*** error: movie "%s" was not found' % filename
+                errwarn('*** warning: movie "%s" was not found' % filename)
                 if sources3:
-                    print '    could not find any .ogg/.mp4/.webm version of this filename'
-                    _abort()
+                    errwarn('    could not find any .ogg/.mp4/.webm version of this filename')
+                    import time
+                    time.sleep(5)  # let the warning shine for a while
+                    #_abort()
 
             text += """
 </video>
@@ -1875,8 +2165,9 @@ def html_author(authors_and_institutions, auth2index,
 
 
 def html_abstract(m):
-    r'<b>\g<type>.</b> \g<text>\n\g<rest>'
+    # m is r'<b>\g<type>.</b> \g<text>\n\g<rest>'
     type = m.group('type')
+    type = locale_dict[locale_dict['language']].get(type, type)
     text = m.group('text')
     rest = m.group('rest')
     if type.lower() == 'preface':
@@ -1889,48 +2180,7 @@ def html_ref_and_label(section_label2title, format, filestr):
     # This is the first format-specific function to be called.
     # We therefore do some HTML-specific fixes first.
 
-    # Section references:
-    # .... see section ref{my:sec} is replaced by
-    # see the section "...section heading..."
-    pattern = r'[Ss]ection(s?)\s+ref\{'
-    replacement = r'the section\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    pattern = r'[Cc]hapter(s?)\s+ref\{'
-    replacement = r'the chapter\g<1> ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    # Do not use "the appendix" since the headings in appendices
-    # have "Appendix: title"
-    pattern = r'[Aa]ppendix\s+ref\{'
-    #replacement = r'the appendix ref{'
-    replacement = r' ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    pattern = r'[Aa]ppendices\s+ref\{'
-    #replacement = r'the appendices ref{'
-    replacement = r' ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-    # Need special adjustment to handle start of sentence (capital) or not.
-    # Check: end of previous sentence (?.!) or start of new paragraph.
-    #pattern = r'([.?!]\s+|\n\n)the (sections?|chapters?|appendix|appendices)\s+ref'
-    pattern = r'([.?!]\s+|\n\n)the (sections?|chapters?)\s+ref'
-    replacement = r'\g<1>The \g<2> ref'
-    filestr = re.sub(pattern, replacement, filestr, flags=re.MULTILINE)
-    # Fix side effect: cf. The section ...
-    filestr = re.sub(r'cf\.\s+The', 'cf. the', filestr)
-
-    # Remove "the" Exercise, Project, Problem in references since those words
-    # are used in the title of the section too
-    pattern = r'(the\s*)?([Ee]xercises?|[Pp]rojects?|[Pp]roblems?)\s+ref\{'
-    replacement = r'ref{'
-    filestr = re.sub(pattern, replacement, filestr)
-
-    # Fix side effect from the above that one gets constructions 'the The'
-    filestr = re.sub(r'the\s+The', 'the', filestr)
-
-    # Recognize mdash ---
-    # Must be attached to text or to a quote (ending in ., quotes, or
-    # emphasis *)
-    pattern = r'''([^-][A-Za-z0-9.'"*])---([A-Za-z ][^-])'''
-    filestr = re.sub(pattern, '\g<1>&mdash;\g<2>', filestr)
+    filestr = fix_ref_section_chapter(filestr, format)
 
     # extract the labels in the text (filestr is now without
     # mathematics and associated labels)
@@ -1968,10 +2218,23 @@ def html_ref_and_label(section_label2title, format, filestr):
     # Number all figures, find all figure labels and replace their
     # references by the figure numbers
     # (note: figures are already handled!)
+    #
     caption_start = '<p class="caption">'
     caption_pattern = r'%s(.+?)</p>' % caption_start
-    label_pattern = r'%s.+?<a name="(.+?)">' % caption_start
+    #label_pattern = r'%s.+?<a name="(.+?)">' % caption_start
+    label_pattern = r'%s.+? <!-- caption label: (.+?) -->' % caption_start
     # Should have <h\d id=""> type of labels too
+
+    # References to custom numbered environments are also handled here
+    # We look for all such environments, extract their numbers
+    # from special comment tag and record it to label2no along with Figure's
+    # numbers
+    #
+    # We allow 'no-number numbers' like 'Theorem A', so use number=([^\s]+?) pattern
+    # instead of number=(\d+?)
+
+    custom_env_pattern = r'<!--\s*custom environment:\s*label=([^\s]+?),\s*number=([^\s]+?)\s*-->'
+
     lines = filestr.splitlines()
     label2no = {}
     fig_no = 0
@@ -1988,12 +2251,23 @@ def html_ref_and_label(section_label2title, format, filestr):
             m = re.search(label_pattern, lines[i])
             if m:
                 label2no[m.group(1)] = fig_no
+
+        # process custom environments
+        m = re.search(custom_env_pattern, lines[i])
+        if m:
+            label2no[m.group(1)] = m.group(2)
+
+            # replace the special comment with an anchor
+            lines[i] = re.sub(custom_env_pattern,
+                    "<div id=\"%s\" />" % m.group(1), lines[i])
+
     filestr = '\n'.join(lines)
 
-    for label in label2no:
+    for label, no in label2no.items():
         filestr = filestr.replace('ref{%s}' % label,
-                                  '<a href="#%s">%d</a>' %
-                                  (label, label2no[label]))
+                                  '<a href="#%s">%s</a>' % (label, str(no)))
+        # we allow 'non-number numbers' for custom environments like 'theorem A'
+        # so str(no)
 
     # replace all other references ref{myname} by <a href="#myname">myname</a>:
     for label in running_text_labels:
@@ -2057,7 +2331,7 @@ def html_exercise(exer):
 
 def html_index_bib(filestr, index, citations, pubfile, pubdata):
     if citations:
-        from common import cite_with_multiple_args2multiple_cites
+        from .common import cite_with_multiple_args2multiple_cites
         filestr = cite_with_multiple_args2multiple_cites(filestr)
     for label in citations:
         filestr = filestr.replace('cite{%s}' % label,
@@ -2070,21 +2344,21 @@ def html_index_bib(filestr, index, citations, pubfile, pubdata):
                 bibtext = bibtext.replace(
                     'label{%s}' % label, '<a name="%s"></a>' % label)
                 # (<a name=""></a> is later replaced by a div tag)
-            except UnicodeDecodeError, e:
+            except UnicodeDecodeError as e:
                 if "can't decode byte" in str(e):
                     try:
-                        bibtext = bibtext.decode('utf-8').replace(
+                        bibtext = bibtext.replace(
                             'label{%s}' % label, '<a name="%s"></a>' % label)
-                    except UnicodeDecodeError, e:
-                        print 'UnicodeDecodeError:', e
-                        print '*** error: problems in %s' % pubfile
-                        print '    with key', label
-                        print '    tried to do decode("utf-8"), but it did not work'
+                    except UnicodeDecodeError as e:
+                        errwarn('UnicodeDecodeError: ' + e)
+                        errwarn('*** error: problems in %s' % pubfile)
+                        errwarn('    with key ' + label)
+                        errwarn('    tried to do decode("utf-8"), but it did not work')
                         _abort()
                 else:
-                    print e
-                    print '*** error: problems in %s' % pubfile
-                    print '    with key', label
+                    errwarn(e)
+                    errwarn('*** error: problems in %s' % pubfile)
+                    errwarn('    with key ' + label)
                     _abort()
 
         bibtext = """
@@ -2106,7 +2380,7 @@ def html_index_bib(filestr, index, citations, pubfile, pubdata):
 global tocinfo
 tocinfo = None
 
-def html_toc(sections):
+def html_toc(sections, filestr):
     # Find minimum section level
     level_min = 4
     for title, level, label in sections:
@@ -2116,9 +2390,16 @@ def html_toc(sections):
     toc_depth = int(option('toc_depth=', 2))
 
     extended_sections = []  # extended list for toc in HTML file
+    toc = locale_dict[locale_dict['language']]['toc']
+    # This function is always called, only extend headings if a TOC is wanted
+    m = re.search(r'^TOC: +[Oo]n', filestr, flags=re.MULTILINE)
+    if m:
+        extended_sections.append(
+            (toc, level_min, 'table_of_contents', 'table_of_contents'))
     #hr = '<hr>'
     hr = ''
-    s = '<h2>Table of contents</h2>\n\n%s\n<p>\n' % hr
+    s = '<h1 id="table_of_contents">%s</h2>\n\n%s\n<p>\n' % (toc, hr)
+    # (we add class="anchor" in the calling code the above heading, if necessary)
     for i in range(len(sections)):
         title, level, label = sections[i]
         href = label if label is not None else '___sec%d' % i
@@ -2174,9 +2455,9 @@ def html_inline_comment(m):
         if ' -> ' in comment:
             # Replacement
             if comment.count(' -> ') != 1:
-                print '*** wrong syntax in inline comment:'
-                print comment
-                print '(more than two ->)'
+                errwarn('*** wrong syntax in inline comment:')
+                errwarn(comment)
+                errwarn('(more than two ->)')
                 _abort()
             orig, new = comment.split(' -> ')
             return r' <font color="red">(<b>%s</b>:)</font> <del> %s </del> <font color="red">%s</font>' % (name, orig, new)
@@ -2226,9 +2507,9 @@ def html_quiz(quiz):
             if len(choice) == 3 and quiz_expl == 'on':
                 expl = choice[2]
             if '<img' in expl or '$$' in expl or '<pre' in expl:
-                print '*** warning: quiz explanation contains block (fig/code/math)'
-                print '    and is therefore skipped'
-                print expl, '\n'
+                errwarn('*** warning: quiz explanation contains block (fig/code/math)')
+                errwarn('    and is therefore skipped')
+                errwarn(expl + '\n')
                 expl = ''  # drop explanation when it needs blocks
             # Should remove markup
             pattern = r'<a href="(.+?)">(.*?)</a>'  # URL
@@ -2300,7 +2581,10 @@ if html_admon_style is None:
         html_admon_style = 'gray'
 
 for _admon in admons:
-    _Admon = _admon.capitalize()  # upper first char
+    # _Admon is constructed at import time, used as default title, but
+    # will always be in English because of the early construction
+    _Admon = locale_dict[locale_dict['language']].get(_admon, _admon).capitalize()  # upper first char
+
     # Below we could use
     # <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh..."/>
     # for embedding images in the html code rather than just including them
@@ -2338,6 +2622,7 @@ def html_%(_admon)s(block, format, title='%(_Admon)s', text_size='normal'):
   </div>""" %% title
             text += """
 <div class="panel-body">
+<p> <!-- subsequent paragraphs come in larger fonts, so start with a paragraph -->
 %%s
 </div>
 </div>
@@ -2430,10 +2715,10 @@ def html_%(_admon)s(block, format, title='%(_Admon)s', text_size='normal'):
 """ %% (text_size, title, block)
         return paragraph
     else:
-        print '*** error: illegal --html_admon=%%s' %% html_admon_style
-        print '    legal values are colors, gray, yellow, apricot, lyx,'
-        print '    paragraph, paragraph-80, paragraph-120; and'
-        print '    bootstrap_alert or bootstrap_panel for --html_style=bootstrap*|bootswatch*'
+        errwarn('*** error: illegal --html_admon=%%s' %% html_admon_style)
+        errwarn('    legal values are colors, gray, yellow, apricot, lyx,')
+        errwarn('    paragraph, paragraph-80, paragraph-120; and')
+        errwarn('    bootstrap_alert or bootstrap_panel for --html_style=bootstrap*|bootswatch*')
         _abort()
 ''' % vars()
     exec(_text)
@@ -2481,7 +2766,7 @@ def define(FILENAME_EXTENSION,
         'section':       r'\n<h1>\g<subst></h1>',
         'subsection':    r'\n<h2>\g<subst></h2>',
         'subsubsection': r'\n<h3>\g<subst></h3>\n',
-        'paragraph':     r'<b>\g<subst></b>\n',
+        'paragraph':     r'<b>\g<subst></b>' + '\n',
         'abstract':      html_abstract,
         'title':         r'\n\n<center><h1>\g<subst></h1></center>  <!-- document title -->\n',
         'date':          r'<p>\n<center><h4>\g<subst></h4></center> <!-- date -->\n<br>',
@@ -2622,7 +2907,7 @@ def define(FILENAME_EXTENSION,
                     'Architects+Daughter', 'Kotta+One',)
     if body_font_family == '?' or body_font_family == 'help' or \
        heading_font_family == '?' or heading_font_family == 'help':
-        print ' '.join(google_fonts)
+        errwarn(' '.join(google_fonts))
         _abort()
     link = "@import url(http://fonts.googleapis.com/css?family=%s);"
     import_body_font = ''
@@ -2630,13 +2915,13 @@ def define(FILENAME_EXTENSION,
         if body_font_family in google_fonts:
             import_body_font = link % body_font_family
         else:
-            print '*** warning: --html_body_font=%s is not valid' % body_font_family
+            errwarn('*** warning: --html_body_font=%s is not valid' % body_font_family)
     import_heading_font = ''
     if heading_font_family is not None:
         if heading_font_family in google_fonts:
             import_heading_font = link % heading_font_family
         else:
-            print '*** warning: --html_heading_font=%s is not valid' % heading_font_family
+            errwarn('*** warning: --html_heading_font=%s is not valid' % heading_font_family)
     if import_body_font or import_heading_font:
         css = '    ' + '\n    '.join([import_body_font, import_heading_font]) \
               + '\n' + css
@@ -2765,24 +3050,24 @@ div { text-align: justify; text-justify: inter-word; }
                           html_style.split('_')[1]
             legal_bootswatch_styles = 'cerulean cosmo flatly journal lumen readable simplex spacelab united yeti amelia cyborg darkly slate spruce superhero'.split()
             if boots_style not in legal_bootswatch_styles:
-                print '*** error: wrong bootswatch style %s' % boots_style
-                print '    legal choices:\n    %s' % ', '.join(legal_bootswatch_styles)
+                errwarn('*** error: wrong bootswatch style %s' % boots_style)
+                errwarn('    legal choices:\n    %s' % ', '.join(legal_bootswatch_styles))
                 _abort()
             urls = ['http://netdna.bootstrapcdn.com/bootswatch/%s/%s/bootstrap.min.css' % (boots_version, boots_style)]
             # Dark styles need some recommended options
             dark_styles = 'amelia cyborg darkly slate superhero'.split()
             if boots_style in dark_styles:
                 if not option('keep_pygments_html_bg') or option('pygments_html_style=', None) is None or option('html_code_style=', None) is None or option('html_pre_style=', None) is None:
-                    print """\
+                    errwarn("""\
 *** warning: bootswatch style "%s" is dark and some
     options to doconce format html are recommended:
     --pygments_html_style=monokai     # dark background
     --keep_pygments_html_bg           # keep code background in admons
     --html_code_style=inherit         # use <code> style in surroundings (no red)
     --html_pre_style=inherit          # use <pre> style in surroundings
-    """ % boots_style
+    """ % boots_style)
         else:
-            print '*** wrong --html_style=%s' % html_style
+            errwarn('*** wrong --html_style=%s' % html_style)
             _abort()
 
         style = """
@@ -2806,6 +3091,21 @@ code { color: inherit; background-color: transparent; }
 pre { color: inherit; background-color: transparent; }
 """
     if html_style.startswith('boots'):
+        height = 50  # fixed header hight in pixels, varies with style
+        if 'bootswatch' in html_style:
+            _style = html_style.split('_')[-1]
+            if _style in ('simplex', 'superhero'):
+                height = 40
+            elif _style in ('yeti',):
+                height = 45
+            elif _style in ('cerulean', 'cosmo', 'lumen', 'spacelab', 'united', 'slate', 'cyborg', 'amelia'):
+                height = 50
+            elif _style.startswith('journal') or _style in ('flatly', 'darkly'):
+                height = 60
+            elif _style in ('readable',):
+                height = 64
+        if html_style.startswith('bootstrap'):
+            height = 50
         style_changes += """
 /* Add scrollbar to dropdown menus in bootstrap navigation bar */
 .dropdown-menu {
@@ -2813,7 +3113,16 @@ pre { color: inherit; background-color: transparent; }
    max-height: 400px;
    overflow-x: hidden;
 }
-"""
+
+/* Adds an invisible element before each target to offset for the navigation
+   bar */
+.anchor::before {
+  content:"";
+  display:block;
+  height:%spx;      /* fixed header height for style %s */
+  margin:-%spx 0 0; /* negative fixed header height */
+}
+""" % (height, html_style, height)
         if '!bquiz' in filestr:
         # Style for buttons for collapsing paragraphs
             style_changes += """
@@ -2822,6 +3131,11 @@ in.collapse+a.btn.showdetails:before { content:'Hide details'; }
 .collapse+a.btn.showdetails:before { content:'Show details'; }
 */
 """
+    body_style = option('html_body_style=', None)
+    if body_style is not None:
+        style_changes += """
+body { %s; }
+""" % body_style
     if style_changes:
         style += """
 <style type="text/css">
@@ -2849,7 +3163,7 @@ in.collapse+a.btn.showdetails:before { content:'Hide details'; }
             # Make link back to the main HTML file
             outfilename = option('html_output=', None)
             if outfilename is None:
-                from doconce import dofile_basename
+                from .doconce import dofile_basename
                 outfilename = dofile_basename + '.html'
             else:
                 if not outfilename.endswith('html'):
@@ -2874,6 +3188,7 @@ in.collapse+a.btn.showdetails:before { content:'Hide details'; }
     <a class="navbar-brand" href="%s">%s</a>
   </div>
 """ % (url, link)
+
                 bootstrap_title_bar = """
 <!-- Bootstrap navigation bar -->
 <div class="navbar navbar-default navbar-fixed-top">
@@ -2889,7 +3204,7 @@ in.collapse+a.btn.showdetails:before { content:'Hide details'; }
   <div class="navbar-collapse collapse navbar-responsive-collapse">
     <ul class="nav navbar-nav navbar-right">
       <li class="dropdown">
-        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contents <b class="caret"></b></a>
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">***CONTENTS_PULL_DOWN_MENU*** <b class="caret"></b></a>
         <ul class="dropdown-menu">
 ***TABLE_OF_CONTENTS***
         </ul>
@@ -2906,7 +3221,7 @@ in.collapse+a.btn.showdetails:before { content:'Hide details'; }
     keywords = [keyword for keyword in keywords
                 if not '`' in keyword]
     # Keywords paragraph
-    import common
+    from . import common
     m = re.search(common.INLINE_TAGS['keywords'], filestr, flags=re.MULTILINE)
     if m:
         keywords += re.split(r', *', m.group(1))
@@ -2986,7 +3301,14 @@ Automatically generated HTML file from DocOnce source
 </footer>
 -->
 """
-    from common import has_copyright
+    # Need for jquery library? !bc pypro-h (show/hide button for code)
+    m = re.search(r'^!bc +([a-z0-9]+)-h', filestr, flags=re.MULTILINE)
+    if m and 'ajax.googleapis.com/ajax/libs/jquery' not in OUTRO['html']:
+        OUTRO['html'] += """
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.js"></script>
+"""
+
+    from .common import has_copyright
     copyright_, symbol = has_copyright(filestr)
     if copyright_:
         OUTRO['html'] += """
@@ -3026,28 +3348,16 @@ def latin2html(text):
     if not isinstance(text, str):
         return text
 
-    # Turn ascii into utf-8 or latin-1 before finding the ord(c)
-    # codes and writing them out in html
     text_new = []
-    try:
-        text = text.decode('utf-8')
-    except UnicodeDecodeError, e:
-        try:
-            text = text.decode('latin-1')
-        except UnicodeDecodeError, e:
-            print 'Tried to interpret the file as utf-8 (failed) and latin-1 (failed) - aborted'
-            raise e
-    #except UnicodeEncodeError, e:
-    #    pass
     for c in text:
         try:
             if ord(c) > 159:
                 text_new.append('&#%d;' % ord(c))
             else:
                 text_new.append(c)
-        except Exception, e:
-            print e
-            print 'character causing problems:', c
+        except Exception as e:
+            errwarn(e)
+            errwarn('character causing problems: ' + c)
             raise e.__class__('%s: character causing problems: %s' % \
                               (e.__class__.__name__, c))
     return ''.join(text_new)
